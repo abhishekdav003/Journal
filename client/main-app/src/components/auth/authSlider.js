@@ -14,13 +14,6 @@ export default function AuthSlider({ role, activeTab }) {
     activeTab === 'login' ? "/images/login-img.svg" : "/images/register-img.svg"
   );
   const [fadeImage, setFadeImage] = useState(false);
-
-  useEffect(() => {
-    if (user && user.role) {
-      router.push(`/${user.role}/dashboard`);
-    }
-  }, [user, router]);
-
   // ✅ FIXED USE EFFECT (Animation Logic)
   useEffect(() => {
     const targetImage = activeTab === 'login' ? "/images/login-img.svg" : "/images/register-img.svg";
@@ -58,7 +51,7 @@ export default function AuthSlider({ role, activeTab }) {
         <div className="absolute bottom-[-10%] right-[-10%] w-125 h-125 bg-[#8834D3] rounded-full mix-blend-multiply filter blur-[120px] opacity-40 animate-blob animation-delay-2000"></div>
 
         {/* GLASS CARD CONTAINER */}
-        <div className="relative -top-8 z-10 w-full max-w-6xl h-[680px] md:h-[650px] bg-white/40 backdrop-blur-xl rounded-[3rem] shadow-2xl overflow-hidden grid md:grid-cols-2 border border-white/50">
+        <div className="relative -top-8 z-10 w-full max-w-6xl h-170 md:h-162.5 bg-white/40 backdrop-blur-xl rounded-[3rem] shadow-2xl overflow-hidden grid md:grid-cols-2 ">
             
             {/* LEFT SIDE: Image Section */}
             <div className="hidden md:flex flex-col items-center justify-center relative overflow-hidden">
@@ -74,13 +67,13 @@ export default function AuthSlider({ role, activeTab }) {
             </div>
 
             {/* RIGHT SIDE: Form Section */}
-            <div className="w-full h-full flex flex-col items-center justify-center p-6 md:p-8 relative bg-white/30">
+            <div className="w-full h-full flex flex-col items-center justify-center p-6 md:p-8 relative bg-white/30 ">
                 
-                <div className="w-full max-w-md relative z-10 flex flex-col h-full justify-center">
+                <div className="w-full max-w-md relative z-10 flex flex-col h-full justify-center border ">
                     
                     {/* Header */}
-                    <div className="text-left mb-6">
-                        <h1 className="text-3xl font-bold text-[#2D1B4E]">Welcome to ABC Education</h1>
+                    <div className="text-center mb-6">
+                        <h1 className="text-2xl font-bold text-[#2D1B4E]">Welcome to Journal Education</h1>
                         <p className="text-[#594a75] mt-2 text-sm font-medium">
                             Please enter your details to access your {displayRole} account.
                         </p>
@@ -122,7 +115,7 @@ export default function AuthSlider({ role, activeTab }) {
                     </div>
 
                     {/* SLIDING FORM AREA */}
-                    <div className="relative w-full flex-grow overflow-hidden"> 
+                    <div className="relative w-full grow overflow-hidden"> 
                         <div className={`absolute top-0 left-0 w-full h-full transition-all duration-500 ease-in-out transform ${
                             activeTab === 'login' ? 'translate-x-0 opacity-100 z-10' : '-translate-x-full opacity-0 z-0'
                         }`}>
