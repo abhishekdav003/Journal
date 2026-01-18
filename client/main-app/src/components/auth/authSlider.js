@@ -1,149 +1,156 @@
 import { useRouter } from "next/router";
 import { useAuth } from "../../context/AuthContext";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import Image from "next/image";
 import LoginForm from "./LoginForm";
 import RegisterForm from "./RegisterForm";
+import Link from "next/link";
 
 export default function AuthSlider({ role, activeTab }) {
   const router = useRouter();
   const { user } = useAuth();
+  
+  const [currentImage, setCurrentImage] = useState(
+    activeTab === 'login' ? "/images/login-img.svg" : "/images/register-img.svg"
+  );
+  const [fadeImage, setFadeImage] = useState(false);
 
-  // Redirect if already logged in
   useEffect(() => {
-    if (user) {
+    if (user && user.role) {
       router.push(`/${user.role}/dashboard`);
     }
   }, [user, router]);
 
+  // ✅ FIXED USE EFFECT (Animation Logic)
+  useEffect(() => {
+    const targetImage = activeTab === 'login' ? "/images/login-img.svg" : "/images/register-img.svg";
+
+    if (currentImage === targetImage) return;
+
+    setFadeImage(true);
+    
+    const timeout = setTimeout(() => {
+        setCurrentImage(targetImage);
+        setFadeImage(false);
+    }, 300);
+
+    return () => clearTimeout(timeout);
+    
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab]); 
+
   const switchTab = (tab) => {
-    // Fixed: Removed space in query param "? tab="
+    if (tab === activeTab) return;
     router.push(`/auth/${role}?tab=${tab}`, undefined, { shallow: true });
   };
 
-  // Fixed: Removed extra spaces in role processing
   const displayRole = role?.charAt(0).toUpperCase() + role?.slice(1);
+  const oppositeRole = role === 'student' ? 'tutor' : 'student';
 
-  // If user is logged in, show loading
-  if (user) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-linear-to-br from-purple-600 to-indigo-700">
-        <div className="text-white text-xl font-medium animate-pulse">
-          Redirecting to Dashboard...
-        </div>
-      </div>
-    );
-  }
+  if (user && user.role) return null;
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-purple-600 via-purple-700 to-indigo-800 flex items-center justify-center px-4 py-8">
-      <div className="w-full max-w-6xl grid md:grid-cols-2 gap-8 items-center">
+    // MAIN BACKGROUND: #EAD7FC
+    <div className="min-h-screen w-full flex items-center justify-center p-4 md:p-8 bg-[#EAD7FC] relative overflow-hidden">
         
-        {/* LEFT SIDE - Auth Form */}
-        <div className="order-2 md:order-1">
-          <div className="bg-white/95 backdrop-blur-lg rounded-3xl shadow-2xl p-8 border border-white/20">
+        {/* DECORATIVE BLOBS */}
+        <div className="absolute top-[-10%] left-[-10%] w-125 h-125 bg-[#8834D3] rounded-full mix-blend-multiply filter blur-[120px] opacity-40 animate-blob"></div>
+        <div className="absolute bottom-[-10%] right-[-10%] w-125 h-125 bg-[#8834D3] rounded-full mix-blend-multiply filter blur-[120px] opacity-40 animate-blob animation-delay-2000"></div>
+
+        {/* GLASS CARD CONTAINER */}
+        <div className="relative -top-8 z-10 w-full max-w-6xl h-[680px] md:h-[650px] bg-white/40 backdrop-blur-xl rounded-[3rem] shadow-2xl overflow-hidden grid md:grid-cols-2 border border-white/50">
             
-            {/* Header */}
-            <div className="text-center mb-6">
-              <h1 className="text-3xl font-bold text-gray-800 mb-2">
-                Welcome to ABC Education Hub
-              </h1>
-              <p className="text-gray-600 text-sm">
-                Enter your credentials to access your account
-              </p>
+            {/* LEFT SIDE: Image Section */}
+            <div className="hidden md:flex flex-col items-center justify-center relative overflow-hidden">
+                <div className={`relative w-full h-full flex items-center justify-center transition-all duration-500 transform ${fadeImage ? 'opacity-0 scale-95' : 'opacity-100 scale-100'}`}>
+                    <Image 
+                        src={currentImage}
+                        alt="Auth Illustration"
+                        fill
+                        className="object-cover" 
+                        priority
+                    />
+                </div>
             </div>
 
-            {/* Tab Buttons */}
-            <div className="flex gap-2 mb-8 bg-gray-100 p-1.5 rounded-xl">
-              <button
-                onClick={() => switchTab("login")}
-                className={`flex-1 py-3 px-6 rounded-lg font-semibold transition-all duration-300 ${
-                  activeTab === "login"
-                    ? "bg-linear-to-r from-purple-600 to-indigo-600 text-white shadow-lg transform scale-105"
-                    : "text-gray-600 hover:text-gray-800"
-                }`}
-              >
-                Login
-              </button>
-              <button
-                onClick={() => switchTab("register")}
-                className={`flex-1 py-3 px-6 rounded-lg font-semibold transition-all duration-300 ${
-                  activeTab === "register"
-                    ? "bg-linear-to-r from-purple-600 to-indigo-600 text-white shadow-lg transform scale-105"
-                    : "text-gray-600 hover:text-gray-800"
-                }`}
-              >
-                Register
-              </button>
+            {/* RIGHT SIDE: Form Section */}
+            <div className="w-full h-full flex flex-col items-center justify-center p-6 md:p-8 relative bg-white/30">
+                
+                <div className="w-full max-w-md relative z-10 flex flex-col h-full justify-center">
+                    
+                    {/* Header */}
+                    <div className="text-left mb-6">
+                        <h1 className="text-3xl font-bold text-[#2D1B4E]">Welcome to ABC Education</h1>
+                        <p className="text-[#594a75] mt-2 text-sm font-medium">
+                            Please enter your details to access your {displayRole} account.
+                        </p>
+                    </div>
+
+                    {/* --- SMOOTH SLIDING PILL TABS --- */}
+                    <div className="relative flex bg-white/50 rounded-full p-1.5 mb-8 backdrop-blur-md border border-white/40 shadow-sm">
+                        
+                        {/* THE GLIDER */}
+                        <div
+                            className={`absolute top-1.5 bottom-1.5 w-[calc(50%-6px)] bg-[#8834D3] rounded-full shadow-md transition-all duration-300 ease-in-out z-0 ${
+                                activeTab === 'login' ? 'left-1.5' : 'left-[calc(50%+1.5px)]'
+                            }`}
+                        ></div>
+
+                        {/* Login Button */}
+                        <button
+                            onClick={() => switchTab("login")}
+                            className={`relative z-10 flex-1 py-3 rounded-full text-sm font-bold transition-colors duration-300 ${
+                                activeTab === "login" 
+                                ? "text-white" 
+                                : "text-[#594a75] hover:text-[#8834D3]"
+                            }`}
+                        >
+                            Login
+                        </button>
+
+                        {/* Register Button */}
+                        <button
+                            onClick={() => switchTab("register")}
+                            className={`relative z-10 flex-1 py-3 rounded-full text-sm font-bold transition-colors duration-300 ${
+                                activeTab === "register" 
+                                ? "text-white" 
+                                : "text-[#594a75] hover:text-[#8834D3]"
+                            }`}
+                        >
+                            Register
+                        </button>
+                    </div>
+
+                    {/* SLIDING FORM AREA */}
+                    <div className="relative w-full flex-grow overflow-hidden"> 
+                        <div className={`absolute top-0 left-0 w-full h-full transition-all duration-500 ease-in-out transform ${
+                            activeTab === 'login' ? 'translate-x-0 opacity-100 z-10' : '-translate-x-full opacity-0 z-0'
+                        }`}>
+                            <LoginForm role={role} />
+                        </div>
+
+                        <div className={`absolute top-0 left-0 w-full h-full transition-all duration-500 ease-in-out transform ${
+                            activeTab === 'register' ? 'translate-x-0 opacity-100 z-10' : 'translate-x-full opacity-0 z-0'
+                        }`}>
+                            <RegisterForm role={role} displayRole={displayRole} />
+                        </div>
+                    </div>
+
+                    {/* FOOTER SWITCHER */}
+                    <div className="mt-4 text-center">
+                        <p className="text-sm text-[#594a75]">
+                            Not a {displayRole}?{" "}
+                            <Link href={`/auth/${oppositeRole}?tab=${activeTab}`}>
+                                <span className="text-[#8834D3] font-bold hover:underline cursor-pointer">
+                                    {activeTab === 'login' ? 'Login' : 'Register'} as {oppositeRole.charAt(0).toUpperCase() + oppositeRole.slice(1)}
+                                </span>
+                            </Link>
+                        </p>
+                    </div>
+
+                </div>
             </div>
-
-            {/* Form Container with Slide Animation */}
-            <div className="relative overflow-hidden">
-              <div
-                className={`transition-all duration-500 ease-in-out ${
-                  activeTab === "login"
-                    ? "opacity-100 transform translate-x-0"
-                    : "opacity-0 transform -translate-x-full absolute inset-0"
-                }`}
-              >
-                {activeTab === "login" && <LoginForm role={role} displayRole={displayRole} />}
-              </div>
-
-              <div
-                className={`transition-all duration-500 ease-in-out ${
-                  activeTab === "register"
-                    ? "opacity-100 transform translate-x-0"
-                    : "opacity-0 transform translate-x-full absolute inset-0"
-                }`}
-              >
-                {activeTab === "register" && <RegisterForm role={role} displayRole={displayRole} />}
-              </div>
-            </div>
-
-            {/* Terms & Privacy */}
-            <p className="text-center text-xs text-gray-500 mt-6">
-              By clicking continue, you agree to our{" "}
-              <a href="#" className="text-purple-600 hover:underline">
-                Terms of Service
-              </a>{" "}
-              and{" "}
-              <a href="#" className="text-purple-600 hover:underline">
-                Privacy Policy
-              </a>
-            </p>
-          </div>
         </div>
-
-        {/* RIGHT SIDE - Illustration */}
-        <div className="order-1 md:order-2 flex items-center justify-center">
-          <div className="text-center text-white space-y-6">
-            <div className="w-full max-w-md mx-auto">
-              <div className="bg-white/10 backdrop-blur-sm rounded-3xl p-12 border border-white/20">
-                <div className="text-9xl mb-4">🎓</div>
-                <h2 className="text-3xl font-bold mb-3">Learn Anything</h2>
-                <p className="text-lg text-purple-100">
-                  Join thousands of {displayRole}s on their learning journey
-                </p>
-              </div>
-            </div>
-
-            {/* Features */}
-            <div className="grid grid-cols-3 gap-4 max-w-md mx-auto mt-8">
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
-                <div className="text-3xl mb-2">📚</div>
-                <p className="text-sm font-medium">1000+ Courses</p>
-              </div>
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
-                <div className="text-3xl mb-2">👨‍🏫</div>
-                <p className="text-sm font-medium">Expert Tutors</p>
-              </div>
-              <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 border border-white/20">
-                <div className="text-3xl mb-2">🏆</div>
-                <p className="text-sm font-medium">Certificates</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
