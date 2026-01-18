@@ -3,72 +3,44 @@ import { useRouter } from "next/router";
 import { register } from "@/services/apiService";
 import toast, { Toaster } from "react-hot-toast";
 
-export default function RegisterForm({ role, displayRole }) {
+export default function RegisterForm({ role }) {
   const router = useRouter();
-
   const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
+    name: "", email: "", password: "", confirmPassword: ""
   });
+  
+  // States for toggling password visibility
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setFormData({
-      ...formData,
-      [name]: type === "checkbox" ? checked : value,
-    });
-  };
+  const handleChange = (e) => setFormData({...formData, [e.target.name]: e.target.value});
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Validation
-    if (!formData.agreeToTerms) {
-      toast.error("Please agree to Terms of Service");
-      return;
-    }
-
-    if (formData.password !== formData.confirmPassword) {
-      toast.error("Passwords do not match!");
-      return;
-    }
-
+    // 1. Validation Logic
     if (formData.password.length < 6) {
-      toast.error("Password must be at least 6 characters");
-      return;
+        return toast.error("Password must be at least 6 characters");
     }
-
+    if (formData.password !== formData.confirmPassword) {
+        return toast.error("Passwords do not match!");
+    }
+    
     setIsLoading(true);
-    const toastId = toast.loading("Creating your account...");
+    const toastId = toast.loading("Creating Account...");
 
     try {
-      const response = await register({
-        name: formData.name,
-        email: formData.email,
-        password: formData.password,
-        role: role,
-      });
-
-      if (response.data.success) {
-        toast.success("Account Created Successfully!", { id: toastId });
-
-        if (role === "tutor") {
-          toast("Please wait for Admin approval before logging in.", {
-            icon: "⏳",
-            duration: 5000,
-          });
-          setTimeout(() => router.push(`/auth/tutor?tab=login`), 3000);
-        } else {
-          setTimeout(() => router.push(`/auth/student?tab=login`), 2000);
-        }
+      const res = await register({ ...formData, role });
+      if (res.data.success) {
+        toast.success("Account Created!", { id: toastId });
+        setTimeout(() => router.push(`/auth/${role}?tab=login`), 2000);
       }
     } catch (err) {
-      console.error("Register Error:", err);
-      const msg = err.response?.data?.message || "Registration failed";
-      toast.error(msg, { id: toastId });
+      // Backend error message show karega (e.g., "Password is required")
+      const errorMsg = err.response?.data?.message || "Registration failed";
+      toast.error(errorMsg, { id: toastId });
     } finally {
       setIsLoading(false);
     }
@@ -77,127 +49,105 @@ export default function RegisterForm({ role, displayRole }) {
   return (
     <>
       <Toaster position="top-center" />
-
-      <form onSubmit={handleSubmit} className="space-y-5">
-        {/* Full Name Field */}
-        <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">
-            Full Name
-          </label>
+      <form onSubmit={handleSubmit} className="space-y-4">
+        
+        {/* Full Name */}
+        <div className="space-y-1">
+          <label className="text-xs font-bold text-[#2D1B4E] ml-1 uppercase tracking-wide">Full Name</label>
           <input
-            type="text"
-            name="name"
-            value={formData.name}
-            onChange={handleChange}
-            placeholder="Enter your full name"
-            className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition-all"
+            name="name" type="text" placeholder="John Doe" onChange={handleChange}
+            className="w-full px-6 py-3 rounded-xl bg-white border border-[#EAD7FC] focus:ring-4 focus:ring-[#8834D3]/20 focus:border-[#8834D3] outline-none text-gray-800 shadow-sm"
             required
           />
         </div>
 
-        {/* Email Field */}
-        <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">
-            Email ID
-          </label>
+        {/* Email ID */}
+        <div className="space-y-1">
+          <label className="text-xs font-bold text-[#2D1B4E] ml-1 uppercase tracking-wide">Email ID</label>
           <input
-            type="email"
-            name="email"
-            value={formData.email}
-            onChange={handleChange}
-            placeholder="Enter your email"
-            className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition-all"
+            name="email" type="email" placeholder="name@example.com" onChange={handleChange}
+            className="w-full px-6 py-3 rounded-xl bg-white border border-[#EAD7FC] focus:ring-4 focus:ring-[#8834D3]/20 focus:border-[#8834D3] outline-none text-gray-800 shadow-sm"
             required
           />
         </div>
 
-        {/* Password Field */}
-        <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">
-            Password
-          </label>
-          <input
-            type="password"
-            name="password"
-            value={formData.password}
-            onChange={handleChange}
-            placeholder="Create a password"
-            className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition-all"
-            required
-          />
+        {/* GRID LAYOUT FOR PASSWORDS */}
+        <div className="grid grid-cols-2 gap-3">
+            
+            {/* Password Field */}
+            <div className="space-y-1">
+                <label className="text-xs font-bold text-[#2D1B4E] ml-1 uppercase tracking-wide">Password</label>
+                <div className="relative">
+                    <input
+                        name="password" 
+                        type={showPassword ? "text" : "password"} 
+                        placeholder="••••••" 
+                        onChange={handleChange}
+                        className="w-full pl-6 pr-10 py-3 rounded-xl bg-white border border-[#EAD7FC] focus:ring-4 focus:ring-[#8834D3]/20 focus:border-[#8834D3] outline-none text-gray-800 shadow-sm"
+                        required
+                        minLength={6} // HTML Validation bhi add kar di
+                    />
+                    <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#8834D3] transition-colors focus:outline-none"
+                    >
+                        {showPassword ? (
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                            </svg>
+                        ) : (
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" />
+                            </svg>
+                        )}
+                    </button>
+                </div>
+            </div>
+
+            {/* Confirm Password Field */}
+            <div className="space-y-1">
+                <label className="text-xs font-bold text-[#2D1B4E] ml-1 uppercase tracking-wide">Confirm Password</label>
+                <div className="relative">
+                    <input
+                        name="confirmPassword" 
+                        type={showConfirmPassword ? "text" : "password"} 
+                        placeholder="••••••" 
+                        onChange={handleChange}
+                        className="w-full pl-6 pr-10 py-3 rounded-xl bg-white border border-[#EAD7FC] focus:ring-4 focus:ring-[#8834D3]/20 focus:border-[#8834D3] outline-none text-gray-800 shadow-sm"
+                        required
+                    />
+                    <button
+                        type="button"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-[#8834D3] transition-colors focus:outline-none"
+                    >
+                        {showConfirmPassword ? (
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                            </svg>
+                        ) : (
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" />
+                            </svg>
+                        )}
+                    </button>
+                </div>
+            </div>
         </div>
 
-        {/* Confirm Password Field */}
-        <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">
-            Confirm Password
-          </label>
-          <input
-            type="password"
-            name="confirmPassword"
-            value={formData.confirmPassword}
-            onChange={handleChange}
-            placeholder="Confirm your password"
-            className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none transition-all"
-            required
-          />
-        </div>
-
-        {/* Terms Checkbox */}
-        <div className="flex items-start">
-          <input
-            type="checkbox"
-            name="agreeToTerms"
-            id="agreeToTerms"
-            checked={formData.agreeToTerms}
-            onChange={handleChange}
-            className="w-4 h-4 mt-1 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
-          />
-          <label htmlFor="agreeToTerms" className="ml-2 text-sm text-gray-600">
-            I agree to the{" "}
-            <a href="#" className="text-purple-600 hover:underline font-medium">
-              Terms of Service
-            </a>{" "}
-            and{" "}
-            <a href="#" className="text-purple-600 hover:underline font-medium">
-              Privacy Policy
-            </a>
-          </label>
-        </div>
-
-        {/* Submit Button */}
         <button
-          type="submit"
-          disabled={isLoading}
-          className={`w-full py-3.5 rounded-xl text-white font-semibold shadow-lg transition-all duration-300 ${
-            isLoading
-              ? "bg-gray-400 cursor-not-allowed"
-              : "bg-linear-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 transform hover:scale-[1.02] active:scale-[0.98]"
+          type="submit" disabled={isLoading}
+          className={`w-full py-4 rounded-xl text-white font-bold text-lg transition-all duration-300 transform hover:-translate-y-1 mt-4 ${
+            isLoading 
+              ? "bg-[#8834D3]/70 cursor-not-allowed" 
+              : "bg-[#8834D3] hover:bg-[#7228b5]"
           }`}
         >
-          {isLoading ? (
-            <span className="flex items-center justify-center gap-2">
-              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-              Creating Account...
-            </span>
-          ) : (
-            "Create Account"
-          )}
+          {isLoading ? "Processing..." : "Create Account"}
         </button>
-
-        {/* 🆕 Role Switcher (Replaces Social Login) */}
-        <div className="mt-6 text-center border-t border-gray-100 pt-6">
-          <p className="text-sm text-gray-600">
-            {role === "student" ? "Are you a Tutor?" : "Are you a Student?"}{" "}
-            <button
-              type="button"
-              onClick={() => router.push(`/auth/${role === "student" ? "tutor" : "student"}?tab=register`)}
-              className="text-purple-600 font-bold hover:text-purple-700 hover:underline transition-all"
-            >
-              {role === "student" ? "Register as Tutor" : "Register as Student"}
-            </button>
-          </p>
-        </div>
       </form>
     </>
   );
