@@ -6,9 +6,18 @@ function StudentDashboardPage() {
   const { user, loading } = useAuth();
   const router = useRouter();
 
+   // DEBUGGING: Console check karo
+  useEffect(() => {
+    if (user) {
+      console.log("Current User Data in Header:", user);
+    }
+  }, [user]);
+
+  const displayName = user?.name || user?.user?.name || user?.fullName || "User";
+
   useEffect(() => {
     if (!loading && !user) {
-      router.push("/login/student");
+      router.push("/auth/student?tab=login");
     }
   }, [user, loading, router]);
 
@@ -18,7 +27,7 @@ function StudentDashboardPage() {
   return (
     <div>
       <h1>Student Dashboard</h1>
-      <p>Welcome, {user.name}!</p>
+      <p>Welcome, {displayName}!</p>
     </div>
   );
 }

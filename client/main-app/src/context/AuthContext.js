@@ -42,7 +42,7 @@ export function AuthProvider({ children }) {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     setUser(null);
-    router.push("/auth/student?tab=login"); // ✅ UPDATED LINE
+    router.push("/auth/student?tab=login");
   };
 
   return (
