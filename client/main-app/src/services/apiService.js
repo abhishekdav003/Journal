@@ -12,7 +12,8 @@ API.interceptors.request.use((req) => {
   return req;
 });
 
-export const login = (data) => API.post("/user/login", data);
+export const login = (data) => API.post("/auth/login", data);
+export const register = (data) => API.post("/auth/register", data);
 
 export const getStudentData = () => API.get("/student-data");
 export const getTeacherData = () => API.get("/teacher-data");
