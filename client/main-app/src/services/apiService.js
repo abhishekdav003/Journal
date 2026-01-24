@@ -14,6 +14,8 @@ API.interceptors.request.use((req) => {
 
 export const login = (data) => API.post("/auth/login", data);
 export const register = (data) => API.post("/auth/register", data);
+export const resetPassword = (token, data) => API.post(`/auth/reset-password/${token}`, data);
+export const changePassword = (data) => API.post("/auth/forgot-password", data);
 
 export const getStudentData = () => API.get("/student-data");
 export const getTeacherData = () => API.get("/teacher-data");
