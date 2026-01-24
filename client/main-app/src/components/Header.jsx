@@ -62,7 +62,7 @@ export default function Header() {
           {user ? (
             /* LOGGED IN STATE */
             <div className="flex items-center gap-2 md:gap-4">
-              <Link href={`/${user.user.role}/${user.user.role === 'student' ? 'profile' : 'dashboard'}`}> 
+              <Link href={user.user.role === 'student' ? '/user/profile' : `/${user.user.role}/dashboard`}> 
                 <div className={`flex items-center gap-2 cursor-pointer px-2 py-1 md:px-3 md:py-1.5 rounded-full transition-all hover:bg-gray-50`}>
                     <div className="w-8 h-8 rounded-full bg-[#EAD7FC] flex items-center justify-center text-[#8834D3] font-bold text-xs">
                         {displayName.charAt(0).toUpperCase()}
