@@ -49,7 +49,7 @@ export default function LoginForm({ role }) {
         if (userData.role) {
             setTimeout(() => {
                 if (userData.role === 'student') {
-                    router.push(`/student/profile`);
+                    router.push(`/user/profile`);
                 } else {
                     router.push(`/${userData.role}/dashboard`);
                 }

@@ -1,0 +1,330 @@
+import Course from "../models/Course.js";
+import Enrollment from "../models/Enrollment.js";
+import { AppError } from "../utils/appError.js";
+import { catchAsync } from "../utils/catchAsync.js";
+import { deleteFromCloudinary } from "../config/cloudinary.js";
+
+// @desc    Create new course
+// @route   POST /api/courses
+// @access  Private/Tutor
+export const createCourse = catchAsync(async (req, res, next) => {
+  const courseData = {
+    ...req.body,
+    tutor: req.user._id,
+  };
+
+  const course = await Course.create(courseData);
+
+  res.status(201).json({
+    success: true,
+    message: "Course created successfully",
+    data: { course },
+  });
+});
+
+// @desc    Get all courses (published)
+// @route   GET /api/courses
+// @access  Public
+export const getAllCourses = catchAsync(async (req, res) => {
+  const { category, level, search, sort = "-createdAt" } = req.query;
+
+  const query = { isPublished: true };
+
+  if (category) query.category = category;
+  if (level) query.level = level;
+  if (search) query.$text = { $search: search };
+
+  const courses = await Course.find(query)
+    .populate("tutor", "name email")
+    .select("-lectures")
+    .sort(sort);
+
+  res.status(200).json({
+    success: true,
+    count: courses.length,
+    data: { courses },
+  });
+});
+
+// @desc    Get single course
+// @route   GET /api/courses/:id
+// @access  Public
+export const getCourse = catchAsync(async (req, res, next) => {
+  const course = await Course.findById(req.params.id).populate(
+    "tutor",
+    "name email",
+  );
+
+  if (!course) {
+    return next(new AppError("Course not found", 404));
+  }
+
+  // If not published, only tutor can view
+  if (
+    !course.isPublished &&
+    (!req.user || req.user._id.toString() !== course.tutor._id.toString())
+  ) {
+    return next(new AppError("Course not found", 404));
+  }
+
+  // Check if user is enrolled
+  let isEnrolled = false;
+  if (req.user) {
+    isEnrolled = course.enrolledStudents.some(
+      (student) => student.toString() === req.user._id.toString(),
+    );
+  }
+
+  // If not enrolled, hide non-preview lectures
+  if (
+    !isEnrolled &&
+    (!req.user || req.user._id.toString() !== course.tutor._id.toString())
+  ) {
+    course.lectures = course.lectures.filter((lecture) => lecture.isPreview);
+  }
+
+  res.status(200).json({
+    success: true,
+    data: { course, isEnrolled },
+  });
+});
+
+// @desc    Update course
+// @route   PUT /api/courses/:id
+// @access  Private/Tutor
+export const updateCourse = catchAsync(async (req, res, next) => {
+  let course = await Course.findById(req.params.id);
+
+  if (!course) {
+    return next(new AppError("Course not found", 404));
+  }
+
+  // Check ownership
+  if (course.tutor.toString() !== req.user._id.toString()) {
+    return next(new AppError("Not authorized to update this course", 403));
+  }
+
+  course = await Course.findByIdAndUpdate(req.params.id, req.body, {
+    new: true,
+    runValidators: true,
+  });
+
+  res.status(200).json({
+    success: true,
+    message: "Course updated successfully",
+    data: { course },
+  });
+});
+
+// @desc    Delete course
+// @route   DELETE /api/courses/:id
+// @access  Private/Tutor
+export const deleteCourse = catchAsync(async (req, res, next) => {
+  const course = await Course.findById(req.params.id);
+
+  if (!course) {
+    return next(new AppError("Course not found", 404));
+  }
+
+  // Check ownership
+  if (course.tutor.toString() !== req.user._id.toString()) {
+    return next(new AppError("Not authorized to delete this course", 403));
+  }
+
+  // Check if students are enrolled
+  if (course.enrolledStudents.length > 0) {
+    return next(
+      new AppError("Cannot delete course with enrolled students", 400),
+    );
+  }
+
+  // Delete all lecture videos from Cloudinary
+  for (const lecture of course.lectures) {
+    if (lecture.videoPublicId) {
+      await deleteFromCloudinary(lecture.videoPublicId, "video");
+    }
+  }
+
+  // Delete thumbnail from Cloudinary
+  if (course.thumbnailPublicId) {
+    await deleteFromCloudinary(course.thumbnailPublicId, "image");
+  }
+
+  await course.deleteOne();
+
+  res.status(200).json({
+    success: true,
+    message: "Course deleted successfully",
+  });
+});
+
+// @desc    Get tutor's courses
+// @route   GET /api/courses/tutor/my-courses
+// @access  Private/Tutor
+export const getTutorCourses = catchAsync(async (req, res) => {
+  const courses = await Course.find({ tutor: req.user._id }).sort("-createdAt");
+
+  res.status(200).json({
+    success: true,
+    count: courses.length,
+    data: { courses },
+  });
+});
+
+// @desc    Publish/Unpublish course
+// @route   PATCH /api/courses/:id/publish
+// @access  Private/Tutor
+export const togglePublishCourse = catchAsync(async (req, res, next) => {
+  const course = await Course.findById(req.params.id);
+
+  if (!course) {
+    return next(new AppError("Course not found", 404));
+  }
+
+  // Check ownership
+  if (course.tutor.toString() !== req.user._id.toString()) {
+    return next(new AppError("Not authorized to publish this course", 403));
+  }
+
+  // Validate course has required content
+  if (!course.isPublished && course.lectures.length === 0) {
+    return next(new AppError("Cannot publish course without lectures", 400));
+  }
+
+  course.isPublished = !course.isPublished;
+  await course.save();
+
+  res.status(200).json({
+    success: true,
+    message: `Course ${course.isPublished ? "published" : "unpublished"} successfully`,
+    data: { course },
+  });
+});
+
+// @desc    Add lecture to course
+// @route   POST /api/courses/:id/lectures
+// @access  Private/Tutor
+export const addLecture = catchAsync(async (req, res, next) => {
+  const { title, videoUrl, videoPublicId, duration, isPreview } = req.body;
+
+  const course = await Course.findById(req.params.id);
+
+  if (!course) {
+    return next(new AppError("Course not found", 404));
+  }
+
+  // Check ownership
+  if (course.tutor.toString() !== req.user._id.toString()) {
+    return next(new AppError("Not authorized to update this course", 403));
+  }
+
+  const lecture = {
+    title,
+    videoUrl,
+    videoPublicId,
+    duration,
+    isPreview: isPreview || false,
+    order: course.lectures.length + 1,
+  };
+
+  course.lectures.push(lecture);
+  await course.save();
+
+  res.status(201).json({
+    success: true,
+    message: "Lecture added successfully",
+    data: { course },
+  });
+});
+
+// @desc    Update lecture
+// @route   PUT /api/courses/:id/lectures/:lectureId
+// @access  Private/Tutor
+export const updateLecture = catchAsync(async (req, res, next) => {
+  const course = await Course.findById(req.params.id);
+
+  if (!course) {
+    return next(new AppError("Course not found", 404));
+  }
+
+  // Check ownership
+  if (course.tutor.toString() !== req.user._id.toString()) {
+    return next(new AppError("Not authorized to update this course", 403));
+  }
+
+  const lecture = course.lectures.id(req.params.lectureId);
+
+  if (!lecture) {
+    return next(new AppError("Lecture not found", 404));
+  }
+
+  // Update lecture fields
+  Object.assign(lecture, req.body);
+  await course.save();
+
+  res.status(200).json({
+    success: true,
+    message: "Lecture updated successfully",
+    data: { course },
+  });
+});
+
+// @desc    Delete lecture
+// @route   DELETE /api/courses/:id/lectures/:lectureId
+// @access  Private/Tutor
+export const deleteLecture = catchAsync(async (req, res, next) => {
+  const course = await Course.findById(req.params.id);
+
+  if (!course) {
+    return next(new AppError("Course not found", 404));
+  }
+
+  // Check ownership
+  if (course.tutor.toString() !== req.user._id.toString()) {
+    return next(new AppError("Not authorized to update this course", 403));
+  }
+
+  const lecture = course.lectures.id(req.params.lectureId);
+
+  if (!lecture) {
+    return next(new AppError("Lecture not found", 404));
+  }
+
+  // Delete video from Cloudinary
+  if (lecture.videoPublicId) {
+    await deleteFromCloudinary(lecture.videoPublicId, "video");
+  }
+
+  lecture.deleteOne();
+  await course.save();
+
+  res.status(200).json({
+    success: true,
+    message: "Lecture deleted successfully",
+    data: { course },
+  });
+});
+
+// @desc    Get enrolled courses
+// @route   GET /api/courses/student/enrolled
+// @access  Private/Student
+export const getEnrolledCourses = catchAsync(async (req, res) => {
+  const enrollments = await Enrollment.find({ student: req.user._id })
+    .populate({
+      path: "course",
+      populate: { path: "tutor", select: "name email" },
+    })
+    .sort("-createdAt");
+
+  const courses = enrollments.map((enrollment) => ({
+    ...enrollment.course.toObject(),
+    progress: enrollment.completionPercentage,
+    enrolledAt: enrollment.createdAt,
+  }));
+
+  res.status(200).json({
+    success: true,
+    count: courses.length,
+    data: { courses },
+  });
+});

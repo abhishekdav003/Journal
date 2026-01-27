@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect } from "react";
 import { useRouter } from "next/router";
+import { getMe } from "../services/apiService";
 
 const AuthContext = createContext();
 
@@ -9,31 +10,61 @@ export function AuthProvider({ children }) {
   const router = useRouter();
 
   useEffect(() => {
-    const checkUser = () => {
-      try {
-        const token = localStorage. getItem("token");
-        const userData = localStorage.getItem("user");
+    let mounted = true;
 
-        if (token && userData && userData !== "undefined") {
-          setUser(JSON.parse(userData));
-        } else {
-          setUser(null);
+    const init = async () => {
+      setLoading(true);
+      try {
+        const token = localStorage.getItem("token");
+        const rawUser = localStorage.getItem("user");
+
+        let parsed = null;
+        try {
+          if (rawUser && rawUser !== "undefined") {
+            parsed = JSON.parse(rawUser);
+            if (parsed && parsed.user) parsed = parsed.user;
+          }
+        } catch (e) {
+          parsed = null;
         }
-      } catch (error) {
-        console.error("Error reading auth data:", error);
+
+        if (mounted && parsed) setUser(parsed);
+
+        if (token) {
+          // fetch authoritative user from API and sync localStorage
+          try {
+            const res = await getMe();
+            const fetched = res.data?.data?.user || res.data?.user || res.data;
+            if (fetched) {
+              localStorage.setItem("user", JSON.stringify(fetched));
+              if (mounted) setUser(fetched);
+            }
+          } catch (err) {
+            console.error("Failed to refresh user from API:", err);
+            localStorage.removeItem("token");
+            localStorage.removeItem("user");
+            if (mounted) setUser(null);
+          }
+        }
+      } catch (err) {
+        console.error("Auth init error:", err);
         localStorage.removeItem("token");
         localStorage.removeItem("user");
-        setUser(null);
+        if (mounted) setUser(null);
       } finally {
-        setLoading(false);
+        if (mounted) setLoading(false);
       }
     };
 
-    checkUser();
+    init();
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   const login = (userData, token) => {
-    localStorage.setItem("token", token);
+    if (token) localStorage.setItem("token", token);
     localStorage.setItem("user", JSON.stringify(userData));
     setUser(userData);
   };
@@ -47,7 +78,7 @@ export function AuthProvider({ children }) {
 
   return (
     <AuthContext.Provider value={{ user, login, logout, loading }}>
-      {! loading && children}
+      {!loading && children}
     </AuthContext.Provider>
   );
 }
