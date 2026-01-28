@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useAuth } from "../context/AuthContext";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import Image from "next/image";
 import {
   FiUser,
@@ -16,7 +16,25 @@ export default function Header() {
   const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
+  const [storageUser, setStorageUser] = useState(null);
   const dropdownRef = useRef(null);
+
+  // Listen for storage events (when user data updates from other components)
+  useEffect(() => {
+    const handleStorageChange = () => {
+      try {
+        const storedUser = localStorage.getItem("user");
+        if (storedUser && storedUser !== "undefined") {
+          const parsed = JSON.parse(storedUser);
+          setStorageUser(parsed?.user || parsed);
+        }
+      } catch (e) {
+        console.error("Failed to parse user from storage", e);
+      }
+    };
+    window.addEventListener("storage", handleStorageChange);
+    return () => window.removeEventListener("storage", handleStorageChange);
+  }, []);
 
   // Router events se menu close karna
   useEffect(() => {
@@ -41,7 +59,11 @@ export default function Header() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const currentUser = user?.user || user || null;
+  // Derive current user from storage or auth context (no state update in effect)
+  const currentUser = useMemo(() => {
+    return storageUser || user?.user || user || null;
+  }, [storageUser, user]);
+
   const displayName = currentUser?.name || currentUser?.email || "User";
 
   const navItems = [
@@ -56,8 +78,7 @@ export default function Header() {
   return (
     // FIX 1: Removed 'overflow-hidden' form header tag.
     // Added 'z-50' to keep header on top.
-    <header className="w-full bg-gradient-to-r from-[#1E1E2E] via-[#2B2B40] to-[#1E1E2E] shadow-xl border-b border-gray-800 font-sans relative z-50">
-      
+    <header className="w-full bg-linear-to-r from-[#1E1E2E] via-[#2B2B40] to-[#1E1E2E] shadow-xl border-b border-gray-800 font-sans relative z-50">
       {/* FIX 2: Moved Background decorations into a separate absolute div with overflow-hidden.
           This keeps the blobs inside the header area without cutting off the dropdowns. */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
@@ -69,7 +90,7 @@ export default function Header() {
       <div className="max-w-7xl mx-auto px-4 md:px-6 h-16 flex justify-between items-center relative z-10">
         {/* --- LEFT: LOGO --- */}
         <Link href="/" className="flex items-center gap-1 group shrink-0">
-          <span className="text-xl md:text-2xl font-bold tracking-tight bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+          <span className="text-xl md:text-2xl font-bold tracking-tight bg-linear-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
             Journal
           </span>
         </Link>
@@ -111,11 +132,11 @@ export default function Header() {
                   // FIX 3: Simply toggle on click for mobile.
                   // Desktop uses hover, but click can also toggle or navigate.
                   if (window.innerWidth < 768) {
-                     e.stopPropagation(); // Prevent immediate close
-                     setShowUserDropdown(!showUserDropdown);
+                    e.stopPropagation(); // Prevent immediate close
+                    setShowUserDropdown(!showUserDropdown);
                   } else {
-                     // Optional: Navigate on desktop click
-                     // window.location.href = "/user/public-profile"; 
+                    // Optional: Navigate on desktop click
+                    // window.location.href = "/user/public-profile";
                   }
                 }}
                 className="flex items-center gap-2 cursor-pointer px-2 py-1 md:px-3 md:py-1.5 rounded-full transition-all hover:bg-[#2B2B40]"
@@ -136,7 +157,7 @@ export default function Header() {
                   </div>
                 )}
                 {/* Show name only on desktop */}
-                <span className="hidden md:inline text-sm font-semibold text-white max-w-[120px] truncate">
+                <span className="hidden md:inline text-sm font-semibold text-white max-w-30 truncate">
                   {displayName.split(" ")[0]}
                 </span>
               </div>
@@ -146,7 +167,7 @@ export default function Header() {
                 <div className="absolute right-0 top-full pt-2 z-50">
                   <div className="w-72 bg-white border border-gray-200 rounded-xl shadow-2xl overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
                     {/* User Info Section */}
-                    <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-purple-50 to-white">
+                    <div className="p-4 border-b border-gray-200 bg-linear-to-r from-purple-50 to-white">
                       <div className="flex items-center gap-3">
                         {currentUser?.avatar ? (
                           <div className="w-14 h-14 rounded-full overflow-hidden ring-2 ring-purple-200">
@@ -159,7 +180,7 @@ export default function Header() {
                             />
                           </div>
                         ) : (
-                          <div className="w-14 h-14 rounded-full bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center text-white font-bold text-xl shadow-lg">
+                          <div className="w-14 h-14 rounded-full bg-linear-to-br from-purple-400 to-purple-600 flex items-center justify-center text-white font-bold text-xl shadow-lg">
                             {displayName.charAt(0).toUpperCase()}
                           </div>
                         )}
@@ -176,30 +197,79 @@ export default function Header() {
 
                     {/* Menu Items */}
                     <div className="py-2">
-                      <Link href="/user/profile">
-                        <div className="px-4 py-2.5 hover:bg-purple-50 cursor-pointer flex items-center gap-3 text-gray-700 hover:text-purple-700 transition-all group">
-                          <FiUser size={18} />
-                          <span className="text-sm font-medium">Profile</span>
-                        </div>
-                      </Link>
-                      <Link href="/user/courses">
-                        <div className="px-4 py-2.5 hover:bg-purple-50 cursor-pointer flex items-center gap-3 text-gray-700 hover:text-purple-700 transition-all group">
-                          <FiShoppingCart size={18} />
-                          <span className="text-sm font-medium">My cart</span>
-                        </div>
-                      </Link>
-                      <Link href="/user/payments">
-                        <div className="px-4 py-2.5 hover:bg-purple-50 cursor-pointer flex items-center gap-3 text-gray-700 hover:text-purple-700 transition-all group">
-                          <FiCreditCard size={18} />
-                          <span className="text-sm font-medium">Payment methods</span>
-                        </div>
-                      </Link>
-                      <Link href="/user/settings">
-                        <div className="px-4 py-2.5 hover:bg-purple-50 cursor-pointer flex items-center gap-3 text-gray-700 hover:text-purple-700 transition-all group">
-                          <FiSettings size={18} />
-                          <span className="text-sm font-medium">Account settings</span>
-                        </div>
-                      </Link>
+                      {currentUser?.role === "tutor" ? (
+                        // Tutor Menu Items
+                        <>
+                          <Link href="/tutor/dashboard">
+                            <div className="px-4 py-2.5 hover:bg-purple-50 cursor-pointer flex items-center gap-3 text-gray-700 hover:text-purple-700 transition-all group">
+                              <FiUser size={18} />
+                              <span className="text-sm font-medium">
+                                Dashboard
+                              </span>
+                            </div>
+                          </Link>
+                          <Link href="/tutor/courses">
+                            <div className="px-4 py-2.5 hover:bg-purple-50 cursor-pointer flex items-center gap-3 text-gray-700 hover:text-purple-700 transition-all group">
+                              <FiShoppingCart size={18} />
+                              <span className="text-sm font-medium">
+                                My Courses
+                              </span>
+                            </div>
+                          </Link>
+                          <Link href="/tutor/earnings">
+                            <div className="px-4 py-2.5 hover:bg-purple-50 cursor-pointer flex items-center gap-3 text-gray-700 hover:text-purple-700 transition-all group">
+                              <FiCreditCard size={18} />
+                              <span className="text-sm font-medium">
+                                Earnings
+                              </span>
+                            </div>
+                          </Link>
+                          <Link href="/tutor/settings">
+                            <div className="px-4 py-2.5 hover:bg-purple-50 cursor-pointer flex items-center gap-3 text-gray-700 hover:text-purple-700 transition-all group">
+                              <FiSettings size={18} />
+                              <span className="text-sm font-medium">
+                                Settings
+                              </span>
+                            </div>
+                          </Link>
+                        </>
+                      ) : (
+                        // Student Menu Items
+                        <>
+                          <Link href="/user/profile">
+                            <div className="px-4 py-2.5 hover:bg-purple-50 cursor-pointer flex items-center gap-3 text-gray-700 hover:text-purple-700 transition-all group">
+                              <FiUser size={18} />
+                              <span className="text-sm font-medium">
+                                Profile
+                              </span>
+                            </div>
+                          </Link>
+                          <Link href="/user/courses">
+                            <div className="px-4 py-2.5 hover:bg-purple-50 cursor-pointer flex items-center gap-3 text-gray-700 hover:text-purple-700 transition-all group">
+                              <FiShoppingCart size={18} />
+                              <span className="text-sm font-medium">
+                                My Courses
+                              </span>
+                            </div>
+                          </Link>
+                          <Link href="/user/payments">
+                            <div className="px-4 py-2.5 hover:bg-purple-50 cursor-pointer flex items-center gap-3 text-gray-700 hover:text-purple-700 transition-all group">
+                              <FiCreditCard size={18} />
+                              <span className="text-sm font-medium">
+                                Payments
+                              </span>
+                            </div>
+                          </Link>
+                          <Link href="/user/settings">
+                            <div className="px-4 py-2.5 hover:bg-purple-50 cursor-pointer flex items-center gap-3 text-gray-700 hover:text-purple-700 transition-all group">
+                              <FiSettings size={18} />
+                              <span className="text-sm font-medium">
+                                Settings
+                              </span>
+                            </div>
+                          </Link>
+                        </>
+                      )}
                     </div>
 
                     {/* Logout Button */}
@@ -229,7 +299,7 @@ export default function Header() {
               </Link>
 
               <Link href="/auth/student?tab=register">
-                <span className="bg-gradient-to-r from-purple-600 to-pink-600 text-white px-3 py-1.5 md:px-5 md:py-2.5 rounded-lg font-bold text-xs md:text-sm shadow-lg shadow-purple-500/50 hover:shadow-xl hover:shadow-purple-500/70 hover:scale-105 transition-all cursor-pointer">
+                <span className="bg-linear-to-r from-purple-600 to-pink-600 text-white px-3 py-1.5 md:px-5 md:py-2.5 rounded-lg font-bold text-xs md:text-sm shadow-lg shadow-purple-500/50 hover:shadow-xl hover:shadow-purple-500/70 hover:scale-105 transition-all cursor-pointer">
                   Sign Up
                 </span>
               </Link>
@@ -242,12 +312,34 @@ export default function Header() {
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
           >
             {isMobileMenuOpen ? (
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-7 h-7">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={2}
+                stroke="currentColor"
+                className="w-7 h-7"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M6 18L18 6M6 6l12 12"
+                />
               </svg>
             ) : (
-              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-7 h-7">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                strokeWidth={2}
+                stroke="currentColor"
+                className="w-7 h-7"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"
+                />
               </svg>
             )}
           </button>
