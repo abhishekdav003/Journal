@@ -80,35 +80,56 @@ export default function Photo() {
         {/* Notification */}
         {notification && (
           <div
-            className={`fixed top-4 right-4 z-50 px-6 py-4 rounded-xl shadow-2xl flex items-center gap-3 animate-bounce-in border ${
+            className={`fixed top-4 right-4 z-50 px-6 py-4 rounded-xl shadow-2xl backdrop-blur-lg flex items-center gap-3 animate-bounce-in border-2 ${
               notification.type === "success"
-                ? "bg-[#1E1E2E] border-green-500 text-green-400"
-                : "bg-[#1E1E2E] border-red-500 text-red-400"
+                ? "bg-linear-to-r from-green-900/90 to-emerald-900/90 border-green-500/50 text-green-100"
+                : "bg-linear-to-r from-red-900/90 to-rose-900/90 border-red-500/50 text-red-100"
             }`}
           >
             {notification.type === "success" ? (
-              <FiSave className="text-xl" />
+              <FiSave className="text-2xl" />
             ) : (
-              <FiAlertTriangle className="text-xl" />
+              <FiAlertTriangle className="text-2xl" />
             )}
-            <p className="font-semibold">{notification.message}</p>
+            <p className="font-semibold text-base">{notification.message}</p>
           </div>
         )}
 
         {/* Header */}
-        <div className="bg-[#1E1E2E] p-6 rounded-xl border border-gray-800">
-          <h1 className="text-2xl font-bold text-white">Profile picture</h1>
-          <p className="text-gray-400 text-sm mt-1">
-            Add a nice photo of yourself for your profile.
-          </p>
+        <div className="relative bg-linear-to-br from-[#1E1E2E] via-[#2B2B40] to-[#1E1E2E] p-8 rounded-2xl border border-purple-500/20 shadow-xl overflow-hidden">
+          {/* Decorative blur circles */}
+          <div className="absolute -top-10 -right-10 w-40 h-40 bg-purple-500/20 rounded-full blur-3xl"></div>
+          <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-pink-500/20 rounded-full blur-3xl"></div>
+
+          <div className="relative z-10 flex items-center gap-6">
+            {/* Current Avatar Display */}
+            <div className="relative w-20 h-20 rounded-full overflow-hidden border-4 border-purple-500/30 shadow-lg">
+              <Image
+                src={currentAvatar}
+                alt="Profile"
+                width={80}
+                height={80}
+                className="w-full h-full object-cover"
+              />
+            </div>
+
+            <div>
+              <h1 className="text-3xl font-bold bg-linear-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+                Profile Picture
+              </h1>
+              <p className="text-gray-300 text-sm mt-2">
+                Add a professional photo that represents you best
+              </p>
+            </div>
+          </div>
         </div>
 
         {/* Photo Upload Section */}
-        <div className="bg-[#1E1E2E] p-8 rounded-xl border border-gray-800 space-y-6">
+        <div className="bg-linear-to-br from-[#1E1E2E] to-[#2B2B40] p-8 rounded-2xl border border-purple-500/20 shadow-xl space-y-6">
           <div className="flex flex-col md:flex-row items-start gap-8">
             {/* Current Avatar */}
             <div className="flex flex-col items-center gap-4">
-              <div className="relative w-48 h-48 rounded-full overflow-hidden bg-[#2B2B40] border-4 border-gray-800">
+              <div className="relative w-48 h-48 rounded-full overflow-hidden bg-linear-to-br from-purple-900/50 to-pink-900/50 border-4 border-purple-500/30 shadow-2xl">
                 <Image
                   src={currentAvatar}
                   alt="Profile"
@@ -117,26 +138,31 @@ export default function Photo() {
                   className="w-full h-full object-cover"
                 />
                 {saving && (
-                  <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white"></div>
+                  <div className="absolute inset-0 bg-black/70 flex items-center justify-center backdrop-blur-sm">
+                    <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-400"></div>
                   </div>
                 )}
               </div>
-              <p className="text-sm text-gray-400 text-center">Preview</p>
+              <p className="text-sm text-gray-300 text-center font-medium">
+                🖼️ Preview
+              </p>
             </div>
 
             {/* Upload Instructions */}
-            <div className="flex-1 space-y-4">
-              <div className="space-y-2">
-                <h3 className="text-lg font-semibold text-white">
-                  Image preview
-                </h3>
-                <p className="text-sm text-gray-400">
-                  Minimum 200x200 pixels, Maximum 6000x6000 pixels
+            <div className="flex-1 space-y-6">
+              <div className="space-y-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-1 h-8 bg-linear-to-b from-purple-500 to-pink-500 rounded-full"></div>
+                  <h3 className="text-xl font-bold text-white">
+                    Image Requirements
+                  </h3>
+                </div>
+                <p className="text-sm text-gray-300 pl-3">
+                  📏 Minimum 200x200 pixels, Maximum 6000x6000 pixels
                 </p>
               </div>
 
-              <div className="space-y-3">
+              <div className="space-y-4">
                 <input
                   id="avatarInput"
                   type="file"
@@ -148,20 +174,44 @@ export default function Photo() {
                 <button
                   onClick={() => document.getElementById("avatarInput").click()}
                   disabled={saving}
-                  className="bg-[#6D28D9] hover:bg-[#5b21b6] text-white px-6 py-3 rounded-lg font-bold transition-all shadow-lg flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="group bg-linear-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white px-8 py-4 rounded-xl font-bold transition-all shadow-lg hover:shadow-xl hover:scale-105 flex items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
                 >
-                  <FiCamera size={20} />
-                  {saving ? "Uploading..." : "Upload Image"}
+                  <FiCamera size={22} />
+                  {saving ? (
+                    <>
+                      <span className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></span>
+                      Uploading...
+                    </>
+                  ) : (
+                    "Upload New Image"
+                  )}
                 </button>
               </div>
 
-              <div className="mt-6 p-4 bg-[#0F0F16] rounded-lg border border-gray-700">
-                <h4 className="text-sm font-semibold text-white mb-2">Tips:</h4>
-                <ul className="text-xs text-gray-400 space-y-1 list-disc list-inside">
-                  <li>Use a high-quality image with good lighting</li>
-                  <li>Make sure your face is clearly visible</li>
-                  <li>Recommended size: 800x800 pixels</li>
-                  <li>Supported formats: JPG, PNG, WEBP</li>
+              <div className="mt-6 p-6 bg-[#0F0F16] rounded-xl border border-purple-500/20 shadow-lg">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-xl">💡</span>
+                  <h4 className="text-sm font-bold text-purple-300">
+                    Pro Tips:
+                  </h4>
+                </div>
+                <ul className="text-sm text-gray-300 space-y-2">
+                  <li className="flex items-start gap-2">
+                    <span className="text-purple-400 mt-0.5">•</span>
+                    <span>Use a high-quality image with good lighting</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-purple-400 mt-0.5">•</span>
+                    <span>Make sure your face is clearly visible</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-purple-400 mt-0.5">•</span>
+                    <span>Recommended size: 800x800 pixels</span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <span className="text-purple-400 mt-0.5">•</span>
+                    <span>Supported formats: JPG, PNG, WEBP</span>
+                  </li>
                 </ul>
               </div>
             </div>
