@@ -14,7 +14,7 @@ export default function Profile() {
     const token =
       typeof window !== "undefined" && localStorage.getItem("token");
     if (!token || !user) {
-      router.replace("/");
+      router.replace("/auth/student?tab=login");
     }
   }, [loading, user, router]);
 
