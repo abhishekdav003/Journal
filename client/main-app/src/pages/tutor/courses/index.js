@@ -1,10 +1,18 @@
 import { useEffect, useState } from 'react';
-import { getTutorCourses, togglePublishCourse } from '../../../services/apiService'; // IMPORT SERVICE
-import TutorLayout from '../../../components/tutor/TutorLayout';
 import Link from 'next/link';
+import { useRouter } from 'next/router';
+import { getTutorCourses, togglePublishCourse } from '../../../services/apiService';
+import TutorLayout from '../../../components/tutor/TutorLayout';
+// IMPORT COURSE CARD
+import CourseCard from '../../../components/tutor/CourseCard'; 
+import { FiPlus, FiBook, FiSearch } from 'react-icons/fi';
+import toast, { Toaster } from 'react-hot-toast';
 
 export default function MyCourses() {
+  const router = useRouter();
   const [courses, setCourses] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     fetchCourses();
@@ -12,61 +20,106 @@ export default function MyCourses() {
 
   const fetchCourses = async () => {
     try {
+      setLoading(true);
       const res = await getTutorCourses();
-      setCourses(res.data.data.courses);
+      setCourses(res.data?.data?.courses || res.data?.courses || []);
     } catch (err) {
       console.error("Error fetching courses", err);
+      toast.error("Failed to load your courses");
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleToggle = async (id) => {
+  const handleTogglePublish = async (id, currentStatus) => {
     try {
       await togglePublishCourse(id);
-      // Refresh local state to show new status
-      setCourses(courses.map(c => c._id === id ? { ...c, isPublished: !c.isPublished } : c));
+      setCourses(courses.map(c => 
+        c._id === id ? { ...c, isPublished: !currentStatus } : c
+      ));
+      toast.success(currentStatus ? "Course unpublished" : "Course is now Live!");
     } catch (err) {
-      alert("Failed to update status");
+      toast.error("Failed to update status");
     }
   };
+
+  const filteredCourses = courses.filter(course => 
+    course.title.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  if (loading) {
+    return (
+      <TutorLayout>
+        <div className="flex h-[80vh] items-center justify-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-600"></div>
+        </div>
+      </TutorLayout>
+    );
+  }
 
   return (
     <TutorLayout>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">My Courses</h1>
-        <Link href="/tutor/courses/create">
-          <button className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700">
-            + Create New Course
-          </button>
-        </Link>
+      <Toaster position="top-right" />
+      
+      {/* Header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4">
+        <div>
+          <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">My Courses</h1>
+          <p className="text-gray-500 font-medium mt-1">Manage, edit, and track your content.</p>
+        </div>
+        
+        <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
+          <div className="relative flex-1 md:w-64">
+            <FiSearch className="absolute left-3 top-3.5 text-gray-400" />
+            <input 
+              type="text" 
+              placeholder="Search courses..." 
+              className="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none transition shadow-sm text-gray-900 placeholder-gray-400"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          
+          <Link href="/tutor/courses/create">
+            <button className="flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-xl font-bold shadow-lg shadow-purple-200 transition transform active:scale-95 whitespace-nowrap w-full sm:w-auto">
+              <FiPlus size={20} /> New Course
+            </button>
+          </Link>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {courses.map(course => (
-          <div key={course._id} className="bg-white rounded-xl shadow p-4 border border-gray-100">
-            <div className="h-32 bg-gray-200 rounded-lg mb-4 overflow-hidden">
-               {/* Use actual thumbnail if available */}
-               <img src={course.thumbnail} alt={course.title} className="w-full h-full object-cover" />
-            </div>
-            <h3 className="font-semibold text-lg mb-1 truncate">{course.title}</h3>
-            <p className="text-gray-500 text-sm mb-4 capitalize">{course.level}</p>
-            
-            <div className="flex justify-between items-center mt-4 pt-4 border-t">
-              <span className={`px-2 py-1 rounded-full text-xs font-medium ${course.isPublished ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
-                {course.isPublished ? 'Published' : 'Draft'}
-              </span>
-              
-              <div className="flex gap-3">
-                <button onClick={() => handleToggle(course._id)} className="text-sm text-gray-500 hover:text-purple-600">
-                  {course.isPublished ? 'Unpublish' : 'Publish'}
-                </button>
-                <Link href={`/tutor/courses/${course._id}`} className="text-sm text-purple-600 font-medium hover:underline">
-                  Manage
-                </Link>
-              </div>
-            </div>
+      {/* Courses Grid using Component */}
+      {filteredCourses.length > 0 ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {filteredCourses.map(course => (
+            <CourseCard 
+              key={course._id} 
+              course={course} 
+              onTogglePublish={handleTogglePublish} 
+            />
+          ))}
+        </div>
+      ) : (
+        /* Empty State */
+        <div className="flex flex-col items-center justify-center py-20 bg-white rounded-[2.5rem] border border-dashed border-gray-200 text-center">
+          <div className="w-20 h-20 bg-purple-50 rounded-full flex items-center justify-center mb-6">
+            <FiBook className="text-purple-600 text-3xl" />
           </div>
-        ))}
-      </div>
+          <h3 className="text-xl font-bold text-gray-900 mb-2">
+            {searchTerm ? "No courses found" : "No courses created yet"}
+          </h3>
+          <p className="text-gray-500 max-w-md mb-8">
+            {searchTerm 
+              ? `We couldn't find any courses matching "${searchTerm}".` 
+              : "Start your teaching journey by creating your first curriculum. It only takes a few minutes!"}
+          </p>
+          <Link href="/tutor/courses/create">
+            <button className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-3 rounded-xl font-bold shadow-lg shadow-purple-200 transition">
+              Create Your First Course
+            </button>
+          </Link>
+        </div>
+      )}
     </TutorLayout>
   );
 }
