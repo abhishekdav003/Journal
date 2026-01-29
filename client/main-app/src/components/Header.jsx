@@ -19,21 +19,33 @@ export default function Header() {
   const [storageUser, setStorageUser] = useState(null);
   const dropdownRef = useRef(null);
 
-  // Listen for storage events (when user data updates from other components)
+  // Listen for auth updates (login, profile changes)
   useEffect(() => {
-    const handleStorageChange = () => {
+    const handleAuthUpdate = (e) => {
       try {
-        const storedUser = localStorage.getItem("user");
-        if (storedUser && storedUser !== "undefined") {
-          const parsed = JSON.parse(storedUser);
-          setStorageUser(parsed?.user || parsed);
+        // Handle custom auth-update event (same window)
+        if (e.type === "auth-update" && e.detail) {
+          setStorageUser(e.detail);
+        } else {
+          // Handle storage event (cross-window or manual localStorage changes)
+          const storedUser = localStorage.getItem("user");
+          if (storedUser && storedUser !== "undefined") {
+            const parsed = JSON.parse(storedUser);
+            setStorageUser(parsed?.user || parsed);
+          }
         }
       } catch (e) {
         console.error("Failed to parse user from storage", e);
       }
     };
-    window.addEventListener("storage", handleStorageChange);
-    return () => window.removeEventListener("storage", handleStorageChange);
+
+    window.addEventListener("auth-update", handleAuthUpdate);
+    window.addEventListener("storage", handleAuthUpdate);
+
+    return () => {
+      window.removeEventListener("auth-update", handleAuthUpdate);
+      window.removeEventListener("storage", handleAuthUpdate);
+    };
   }, []);
 
   // Router events se menu close karna
