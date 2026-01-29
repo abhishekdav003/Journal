@@ -43,6 +43,7 @@ export const register = catchAsync(async (req, res, next) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        avatar: user.avatar,
       },
     },
   });
@@ -81,6 +82,7 @@ export const login = catchAsync(async (req, res, next) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        avatar: user.avatar,
       },
     },
   });
