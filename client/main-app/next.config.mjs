@@ -6,6 +6,7 @@ const nextConfig = {
       "ui-avatars.com",
       "res.cloudinary.com",
       "www.transparenttextures.com",
+      "placehold.co",
     ],
   },
 
