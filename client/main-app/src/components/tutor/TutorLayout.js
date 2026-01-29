@@ -7,7 +7,7 @@ export default function TutorLayout({ children }) {
       <TutorSidebar />
 
       {/* Main Content Area - pushed right by the sidebar width (ml-64) */}
-      <main className="flex-1 ml-64 p-8">
+      <main className="flex-1 p-8">
         {children}
       </main>
     </div>
