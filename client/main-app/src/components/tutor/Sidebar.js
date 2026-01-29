@@ -1,34 +1,39 @@
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import { LayoutDashboard, BookOpen, Users, IndianRupee, Star, UserCircle } from 'lucide-react';
 
 const menuItems = [
-  { name: 'Dashboard', path: '/tutor/dashboard', icon: '📊' },
-  { name: 'My Courses', path: '/tutor/courses', icon: '📚' },
-  { name: 'Learners', path: '/tutor/learners', icon: '👥' },
-  { name: 'Payments', path: '/tutor/payments', icon: '💰' },
-  { name: 'Reviews', path: '/tutor/reviews', icon: '⭐' },
-  { name: 'Profile', path: '/tutor/profile', icon: '👤' },
+  { name: 'Dashboard', path: '/tutor/dashboard', icon: LayoutDashboard },
+  { name: 'My Courses', path: '/tutor/courses', icon: BookOpen },
+  { name: 'Learners', path: '/tutor/learners', icon: Users },
+  { name: 'Payments', path: '/tutor/payments', icon: IndianRupee },
+  { name: 'Reviews', path: '/tutor/reviews', icon: Star },
+  { name: 'Profile', path: '/tutor/profile', icon: UserCircle },
 ];
 
 export default function TutorSidebar() {
   const router = useRouter();
 
   return (
-    <div className="w-64 bg-white h-screen shadow-xl fixed left-0 top-0 p-4">
-      <div className="mb-10 px-4">
-        <h2 className="text-2xl font-bold text-purple-700">TutorPanel</h2>
-      </div>
-      <nav>
-        {menuItems.map((item) => (
-          <Link key={item.name} href={item.path}>
-            <div className={`flex items-center p-3 mb-2 rounded-lg cursor-pointer transition-colors ${
-              router.pathname === item.path ? 'bg-purple-100 text-purple-700' : 'hover:bg-gray-100'
-            }`}>
-              <span className="mr-3">{item.icon}</span>
-              <span className="font-medium">{item.name}</span>
-            </div>
-          </Link>
-        ))}
+    <div className="w-68 bg-white h-screen border-r border-gray-100 sticky left-0 top-0 p-6 z-50">
+      
+      <nav className="space-y-1">
+        {menuItems.map((item) => {
+          const isActive = router.pathname === item.path;
+          return (
+            <Link key={item.name} href={item.path}>
+              <div className={`flex items-center gap-3 px-4 py-3 rounded-xl cursor-pointer transition-all duration-200 group ${
+                isActive 
+                ? 'bg-purple-50 text-purple-700 shadow-sm' 
+                : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'
+              }`}>
+                <item.icon size={20} className={`${isActive ? 'text-purple-600' : 'group-hover:scale-110 transition-transform'}`} />
+                <span className="font-semibold text-sm">{item.name}</span>
+                {isActive && <div className="ml-auto w-1.5 h-1.5 bg-purple-600 rounded-full"></div>}
+              </div>
+            </Link>
+          );
+        })}
       </nav>
     </div>
   );
