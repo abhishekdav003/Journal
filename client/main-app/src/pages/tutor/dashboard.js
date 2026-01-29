@@ -96,7 +96,7 @@ export default function TutorDashboard() {
           </div>
         </div>
         
-        <div className="bg-gradient-to-br from-purple-600 to-indigo-700 rounded-2xl p-8 text-white">
+        <div className="bg-linear-to-br from-purple-600 to-indigo-700 rounded-2xl p-8 text-white">
           <h3 className="text-xl font-bold mb-2">Create a New Course</h3>
           <p className="text-purple-100 mb-6 text-sm">Ready to share your knowledge? Build a new course curriculum today.</p>
           <button 
