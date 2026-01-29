@@ -70,12 +70,16 @@ export const getAllCourses = catchAsync(async (req, res) => {
 // @route   GET /api/courses/:id
 // @access  Public
 export const getCourse = catchAsync(async (req, res, next) => {
+  // Debug: log requested id and user (if any)
+  console.log('GET /api/courses/:id - requested id=', req.params.id, ' user=', req.user ? req.user._id : null);
+
   const course = await Course.findById(req.params.id).populate(
     "tutor",
     "name email",
   );
 
   if (!course) {
+    console.log('getCourse: course not found for id=', req.params.id);
     return next(new AppError("Course not found", 404));
   }
 
@@ -84,6 +88,7 @@ export const getCourse = catchAsync(async (req, res, next) => {
     !course.isPublished &&
     (!req.user || req.user._id.toString() !== course.tutor._id.toString())
   ) {
+    console.log('getCourse: access denied or unpublished - id=', req.params.id, ' requester=', req.user ? req.user._id : null, ' tutor=', course.tutor._id);
     return next(new AppError("Course not found", 404));
   }
 

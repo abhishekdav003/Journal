@@ -11,6 +11,7 @@ import paymentRoutes from "./routes/paymentRoutes.js";
 import enrollmentRoutes from "./routes/enrollmentRoutes.js";
 import videoRoutes from "./routes/videoRoutes.js";
 import dashboardRoutes from "./routes/dashboardRoutes.js";
+import reviewRoutes from "./routes/reviewRoutes.js";
 import { errorHandler, notFound } from "./middleware/errorHandler.js";
 
 // Load environment variables
@@ -61,6 +62,7 @@ app.use("/api/payments", paymentRoutes);
 app.use("/api/enrollments", enrollmentRoutes);
 app.use("/api/videos", videoRoutes);
 app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/reviews", reviewRoutes);
 
 // 404 handler
 app.use(notFound);

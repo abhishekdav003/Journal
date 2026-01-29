@@ -29,7 +29,7 @@ export default function TutorPayments() {
       <div className="space-y-8">
         
         {/* Header Stat Card */}
-        <div className="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-2xl p-8 text-white shadow-lg">
+        <div className="bg-linear-to-r from-purple-600 to-indigo-600 rounded-2xl p-8 text-white shadow-lg">
           <p className="text-purple-100 font-medium mb-1">Total Lifetime Revenue</p>
           <h1 className="text-4xl font-bold">₹{stats.totalRevenue.toLocaleString()}</h1>
         </div>
