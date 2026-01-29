@@ -1,110 +1,180 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { useAuth } from "../../context/AuthContext";
-// CHANGE 1: Import the API service function instead of axios
-import { getDashboardStats } from "../../services/apiService"; 
+import { getDashboardStats } from "../../services/apiService";
 import TutorLayout from "../../components/tutor/TutorLayout";
+// Import StatCard component (ensure you created this file from previous steps)
+import StatCard from "../../components/tutor/StatCard"; 
+import { 
+  FiUsers, 
+  FiBookOpen, 
+  FiDollarSign, 
+  FiPlus, 
+  FiArrowUpRight
+} from "react-icons/fi";
+import { 
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer 
+} from "recharts";
 
 export default function TutorDashboard() {
   const { user, loading } = useAuth();
   const router = useRouter();
+  
   const [stats, setStats] = useState({
     totalCourses: 0,
     totalStudents: 0,
     totalRevenue: 0,
-    recentTransactions: []
+    recentTransactions: [],
+    monthlyData: [
+      { name: "Jan", revenue: 4000 },
+      { name: "Feb", revenue: 3000 },
+      { name: "Mar", revenue: 5000 },
+      { name: "Apr", revenue: 4500 },
+      { name: "May", revenue: 6000 },
+      { name: "Jun", revenue: 5500 },
+    ]
   });
 
+  // EFFECT 1: Handle Authentication & Redirection
   useEffect(() => {
-    // 1. Redirect if not logged in
-    if (!loading && !user) {
-      router.push("/auth/tutor?tab=login");
-      return;
-    } 
-    
-    // 2. Redirect if not a tutor
-    if (!loading && user && user.role !== "tutor") {
-      router.push(`/${user.role}/dashboard`);
-      return;
-    }
-
-    // 3. Fetch Data if user is authorized
-    if (user && user.role === "tutor") {
-      fetchStats();
+    if (!loading) {
+      if (!user) {
+        router.push("/auth/tutor?tab=login");
+      } else if (user.role !== "tutor") {
+        router.push(`/${user.role}/dashboard`);
+      }
     }
   }, [user, loading, router]);
 
-  const fetchStats = async () => {
-    try {
-      // CHANGE 2: Use the service call (automatically handles the Token)
-      const res = await getDashboardStats();
-      setStats(res.data.data);
-    } catch (err) {
-      console.error("Failed to load dashboard stats", err);
-      // Optional: If 401, you might want to force logout
-      if (err.response && err.response.status === 401) {
-        router.push("/auth/tutor?tab=login");
+  // EFFECT 2: Fetch Data (Only runs when user is confirmed as tutor)
+  useEffect(() => {
+    // Defined INSIDE useEffect to prevent infinite loops / dependency issues
+    const fetchStats = async () => {
+      try {
+        const res = await getDashboardStats();
+        // Use functional state update to merge safely
+        setStats((prev) => ({ ...prev, ...res.data.data }));
+      } catch (err) {
+        console.error("Failed to load dashboard stats", err);
+        if (err.response && err.response.status === 401) {
+          router.push("/auth/tutor?tab=login");
+        }
       }
-    }
-  };
+    };
 
-  if (loading || !user) return null;
+    if (user && user.role === "tutor") {
+      fetchStats();
+    }
+    // Only re-run if user ID changes (avoids loop if user object reference changes)
+  }, [user?._id, user?.role]); 
+
+  if (loading || !user || user.role !== "tutor") return null;
 
   return (
     <TutorLayout>
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-800">
-          Welcome back, {user.name}! 👨‍🏫
-        </h1>
-        <p className="text-gray-500 mt-1">Here is what's happening with your courses today.</p>
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between mb-10 gap-4">
+        <div>
+          <h1 className="text-4xl font-extrabold text-gray-900 tracking-tight">
+            Welcome back, <span className="text-purple-600">{user.name?.split(' ')[0]}</span>! 👋
+          </h1>
+          <p className="text-gray-500 mt-2 text-lg font-medium">Here is a professional overview of your teaching performance.</p>
+        </div>
+        <button 
+          onClick={() => router.push('/tutor/courses/create')}
+          className="flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-6 py-3.5 rounded-2xl font-bold transition-all transform active:scale-95 shadow-xl shadow-purple-100 w-full md:w-auto"
+        >
+          <FiPlus size={20} />
+          Create New Course
+        </button>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-          <p className="text-gray-500 text-sm font-medium">Total Revenue</p>
-          <h3 className="text-3xl font-bold text-gray-900 mt-2">₹{stats.totalRevenue?.toLocaleString()}</h3>
-        </div>
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-          <p className="text-gray-500 text-sm font-medium">Active Students</p>
-          <h3 className="text-3xl font-bold text-gray-900 mt-2">{stats.totalStudents}</h3>
-        </div>
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-          <p className="text-gray-500 text-sm font-medium">Total Courses</p>
-          <h3 className="text-3xl font-bold text-gray-900 mt-2">{stats.totalCourses}</h3>
-        </div>
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-10">
+        <StatCard 
+          title="Total Earnings" 
+          value={`₹${stats.totalRevenue?.toLocaleString()}`} 
+          icon={FiDollarSign} 
+          trend="up" 
+          trendValue="12%" 
+          color="purple" 
+        />
+        <StatCard 
+          title="Active Learners" 
+          value={stats.totalStudents} 
+          icon={FiUsers} 
+          trend="up" 
+          trendValue="New Students" 
+          color="blue" 
+        />
+        <StatCard 
+          title="Live Content" 
+          value={`${stats.totalCourses} Courses`} 
+          icon={FiBookOpen} 
+          color="orange" 
+        />
       </div>
 
-      {/* Recent Activity Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-          <h3 className="font-bold text-lg mb-4">Recent Transactions</h3>
-          <div className="space-y-4">
+      {/* Analytics & Transactions Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Chart Section */}
+        <div className="lg:col-span-2 bg-white p-8 rounded-[2.5rem] shadow-sm border border-gray-100">
+          <div className="flex items-center justify-between mb-8">
+            <h3 className="text-xl font-black text-gray-900">Revenue Analytics</h3>
+            <select className="bg-gray-50 border-none rounded-xl text-sm font-bold p-2 outline-none cursor-pointer">
+              <option>Last 6 Months</option>
+              <option>Last Year</option>
+            </select>
+          </div>
+          <div className="h-72 w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={stats.monthlyData}>
+                <defs>
+                  <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3}/>
+                    <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#9ca3af', fontSize: 12, fontWeight: 600}} dy={10} />
+                <YAxis hide />
+                <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }} cursor={{ stroke: '#8b5cf6', strokeWidth: 2 }} />
+                <Area type="monotone" dataKey="revenue" stroke="#8b5cf6" strokeWidth={4} fillOpacity={1} fill="url(#colorRev)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+
+        {/* Recent Transactions List */}
+        <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-gray-100 text-left">
+          <div className="flex items-center justify-between mb-8">
+            <h3 className="text-xl font-black text-gray-900">Recent Sales</h3>
+            <button className="text-purple-600 font-bold text-sm hover:underline">View All</button>
+          </div>
+          <div className="space-y-6">
             {stats.recentTransactions?.length > 0 ? (
               stats.recentTransactions.map((tx) => (
-                <div key={tx._id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                  <div>
-                    <p className="font-medium text-sm">Course Enrollment</p>
-                    <p className="text-xs text-gray-500">{new Date(tx.createdAt).toLocaleDateString()}</p>
+                <div key={tx._id} className="group flex justify-between items-center p-4 hover:bg-gray-50 rounded-3xl transition-all cursor-pointer">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-gray-100 rounded-2xl flex items-center justify-center font-black text-gray-400 group-hover:bg-white group-hover:text-purple-600 transition-all shadow-sm">
+                      <FiArrowUpRight size={20} />
+                    </div>
+                    <div>
+                      <p className="font-bold text-gray-900 text-sm">Enrollment</p>
+                      <p className="text-xs text-gray-400 font-medium">
+                        {new Date(tx.createdAt).toLocaleDateString(undefined, {month: 'short', day: 'numeric'})}
+                      </p>
+                    </div>
                   </div>
-                  <span className="text-green-600 font-bold text-sm">+₹{tx.amount}</span>
+                  <span className="text-gray-900 font-black text-sm">+₹{tx.amount}</span>
                 </div>
               ))
             ) : (
-              <p className="text-gray-400 text-sm italic">No recent transactions.</p>
+              <div className="text-center py-10">
+                <p className="text-gray-400 text-sm font-medium italic">No sales recorded yet.</p>
+              </div>
             )}
           </div>
-        </div>
-        
-        <div className="bg-linear-to-br from-purple-600 to-indigo-700 rounded-2xl p-8 text-white">
-          <h3 className="text-xl font-bold mb-2">Create a New Course</h3>
-          <p className="text-purple-100 mb-6 text-sm">Ready to share your knowledge? Build a new course curriculum today.</p>
-          <button 
-            onClick={() => router.push('/tutor/courses/create')}
-            className="bg-white text-purple-700 px-6 py-3 rounded-lg font-bold text-sm hover:bg-gray-100 transition"
-          >
-            + Start Creating
-          </button>
         </div>
       </div>
     </TutorLayout>
