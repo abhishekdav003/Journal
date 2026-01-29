@@ -55,7 +55,7 @@ export function AuthProvider({ children }) {
               if (mounted) setUser(null);
               // Redirect to login page
               if (typeof window !== "undefined") {
-                window.location.href = "/";
+                window.location.href = "/auth/student?tab=login";
               }
             } else {
               console.error("Failed to refresh user from API:", err);
