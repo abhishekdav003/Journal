@@ -101,8 +101,21 @@ export function AuthProvider({ children }) {
     router.push("/auth/student?tab=login");
   };
 
+  const refreshUser = async () => {
+    try {
+      const res = await getMe();
+      const fetched = res.data?.data?.user || res.data?.user || res.data;
+      if (fetched) {
+        localStorage.setItem("user", JSON.stringify(fetched));
+        setUser(fetched);
+      }
+    } catch (err) {
+      console.error("Failed to refresh user:", err);
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, login, logout, loading }}>
+    <AuthContext.Provider value={{ user, login, logout, loading, refreshUser }}>
       {!loading && children}
     </AuthContext.Provider>
   );
