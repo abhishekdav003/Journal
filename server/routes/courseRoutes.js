@@ -13,6 +13,8 @@ import {
   getEnrolledCourses,
   archiveCourse,
   addModule,
+  updateModule,
+  deleteModule,
 } from "../controllers/courseController.js";
 import { protect, restrictTo, optionalAuth } from "../middleware/auth.js";
 
@@ -42,6 +44,8 @@ router.delete("/:id/lectures/:lectureId", restrictTo("tutor"), deleteLecture);
 
 // Module management routes
 router.post("/:id/modules", restrictTo("tutor"), addModule);
+router.put("/:id/modules/:moduleId", restrictTo("tutor"), updateModule);
+router.delete("/:id/modules/:moduleId", restrictTo("tutor"), deleteModule);
 
 // Archive route
 router.patch("/:id/archive", restrictTo("tutor"), archiveCourse);

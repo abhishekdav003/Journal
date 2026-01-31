@@ -71,7 +71,12 @@ export const getAllCourses = catchAsync(async (req, res) => {
 // @access  Public
 export const getCourse = catchAsync(async (req, res, next) => {
   // Debug: log requested id and user (if any)
-  console.log('GET /api/courses/:id - requested id=', req.params.id, ' user=', req.user ? req.user._id : null);
+  console.log(
+    "GET /api/courses/:id - requested id=",
+    req.params.id,
+    " user=",
+    req.user ? req.user._id : null,
+  );
 
   const course = await Course.findById(req.params.id).populate(
     "tutor",
@@ -79,7 +84,7 @@ export const getCourse = catchAsync(async (req, res, next) => {
   );
 
   if (!course) {
-    console.log('getCourse: course not found for id=', req.params.id);
+    console.log("getCourse: course not found for id=", req.params.id);
     return next(new AppError("Course not found", 404));
   }
 
@@ -88,7 +93,14 @@ export const getCourse = catchAsync(async (req, res, next) => {
     !course.isPublished &&
     (!req.user || req.user._id.toString() !== course.tutor._id.toString())
   ) {
-    console.log('getCourse: access denied or unpublished - id=', req.params.id, ' requester=', req.user ? req.user._id : null, ' tutor=', course.tutor._id);
+    console.log(
+      "getCourse: access denied or unpublished - id=",
+      req.params.id,
+      " requester=",
+      req.user ? req.user._id : null,
+      " tutor=",
+      course.tutor._id,
+    );
     return next(new AppError("Course not found", 404));
   }
 
@@ -105,7 +117,26 @@ export const getCourse = catchAsync(async (req, res, next) => {
     !isEnrolled &&
     (!req.user || req.user._id.toString() !== course.tutor._id.toString())
   ) {
-    course.lectures = course.lectures.filter((lecture) => lecture.isPreview);
+    course.lectures = course.lectures.map((lecture) => {
+      if (!lecture.isPreview) {
+        lecture.videoUrl = null;
+        lecture.videoPublicId = null;
+      }
+      return lecture;
+    });
+
+    if (course.modules?.length) {
+      course.modules = course.modules.map((mod) => {
+        mod.lectures = (mod.lectures || []).map((lecture) => {
+          if (!lecture.isPreview) {
+            lecture.videoUrl = null;
+            lecture.videoPublicId = null;
+          }
+          return lecture;
+        });
+        return mod;
+      });
+    }
   }
 
   res.status(200).json({
@@ -127,6 +158,17 @@ export const updateCourse = catchAsync(async (req, res, next) => {
   // Check ownership
   if (course.tutor.toString() !== req.user._id.toString()) {
     return next(new AppError("Not authorized to update this course", 403));
+  }
+
+  // If thumbnail is being replaced, delete the old one from Cloudinary
+  const isThumbnailChanged =
+    req.body.thumbnail && req.body.thumbnail !== course.thumbnail;
+  const isPublicIdChanged =
+    req.body.thumbnailPublicId &&
+    req.body.thumbnailPublicId !== course.thumbnailPublicId;
+
+  if (course.thumbnailPublicId && (isPublicIdChanged || isThumbnailChanged)) {
+    await deleteFromCloudinary(course.thumbnailPublicId, "image");
   }
 
   course = await Course.findByIdAndUpdate(req.params.id, req.body, {
@@ -167,6 +209,17 @@ export const deleteCourse = catchAsync(async (req, res, next) => {
   for (const lecture of course.lectures) {
     if (lecture.videoPublicId) {
       await deleteFromCloudinary(lecture.videoPublicId, "video");
+    }
+  }
+
+  // Delete all module lecture videos from Cloudinary
+  if (course.modules?.length) {
+    for (const mod of course.modules) {
+      for (const lecture of mod.lectures || []) {
+        if (lecture.videoPublicId) {
+          await deleteFromCloudinary(lecture.videoPublicId, "video");
+        }
+      }
     }
   }
 
@@ -212,7 +265,11 @@ export const togglePublishCourse = catchAsync(async (req, res, next) => {
   }
 
   // Validate course has required content
-  if (!course.isPublished && course.lectures.length === 0) {
+  const hasLectures =
+    course.lectures?.length > 0 ||
+    course.modules?.some((mod) => mod.lectures?.length > 0);
+
+  if (!course.isPublished && !hasLectures) {
     return next(new AppError("Cannot publish course without lectures", 400));
   }
 
@@ -230,7 +287,15 @@ export const togglePublishCourse = catchAsync(async (req, res, next) => {
 // @route   POST /api/courses/:id/lectures
 // @access  Private/Tutor
 export const addLecture = catchAsync(async (req, res, next) => {
-  const { title, videoUrl, videoPublicId, duration, isPreview } = req.body;
+  const {
+    title,
+    description,
+    videoUrl,
+    videoPublicId,
+    duration,
+    isPreview,
+    moduleId,
+  } = req.body;
 
   const course = await Course.findById(req.params.id);
 
@@ -245,14 +310,28 @@ export const addLecture = catchAsync(async (req, res, next) => {
 
   const lecture = {
     title,
+    description,
     videoUrl,
     videoPublicId,
     duration,
     isPreview: isPreview || false,
-    order: course.lectures.length + 1,
   };
 
-  course.lectures.push(lecture);
+  if (moduleId) {
+    if (!course.modules || course.modules.length === 0) {
+      return next(new AppError("No sections found for this course", 400));
+    }
+    const module = course.modules.id(moduleId);
+    if (!module) {
+      return next(new AppError("Module not found", 404));
+    }
+    if (!module.lectures) module.lectures = [];
+    lecture.order = (module.lectures?.length || 0) + 1;
+    module.lectures.push(lecture);
+  } else {
+    lecture.order = course.lectures.length + 1;
+    course.lectures.push(lecture);
+  }
   await course.save();
 
   res.status(201).json({
@@ -277,10 +356,29 @@ export const updateLecture = catchAsync(async (req, res, next) => {
     return next(new AppError("Not authorized to update this course", 403));
   }
 
-  const lecture = course.lectures.id(req.params.lectureId);
+  let lecture = course.lectures.id(req.params.lectureId);
+  if (!lecture && course.modules?.length) {
+    course.modules.some((mod) => {
+      const found = mod.lectures.id(req.params.lectureId);
+      if (found) {
+        lecture = found;
+        return true;
+      }
+      return false;
+    });
+  }
 
   if (!lecture) {
     return next(new AppError("Lecture not found", 404));
+  }
+
+  // If video is being replaced, delete old video from Cloudinary
+  if (
+    req.body.videoPublicId &&
+    lecture.videoPublicId &&
+    req.body.videoPublicId !== lecture.videoPublicId
+  ) {
+    await deleteFromCloudinary(lecture.videoPublicId, "video");
   }
 
   // Update lecture fields
@@ -309,7 +407,17 @@ export const deleteLecture = catchAsync(async (req, res, next) => {
     return next(new AppError("Not authorized to update this course", 403));
   }
 
-  const lecture = course.lectures.id(req.params.lectureId);
+  let lecture = course.lectures.id(req.params.lectureId);
+  if (!lecture && course.modules?.length) {
+    course.modules.some((mod) => {
+      const found = mod.lectures.id(req.params.lectureId);
+      if (found) {
+        lecture = found;
+        return true;
+      }
+      return false;
+    });
+  }
 
   if (!lecture) {
     return next(new AppError("Lecture not found", 404));
@@ -358,16 +466,69 @@ export const getEnrolledCourses = catchAsync(async (req, res) => {
 // @route   POST /api/courses/:id/modules
 export const addModule = catchAsync(async (req, res, next) => {
   const course = await Course.findById(req.params.id);
-  
+
   if (!course || course.tutor.toString() !== req.user._id.toString()) {
     return next(new AppError("Course not found or unauthorized", 404));
   }
 
   course.modules.push({
     title: req.body.title,
-    order: course.modules.length + 1
+    description: req.body.description || "",
+    lectures: [],
+    order: course.modules.length + 1,
   });
 
   await course.save();
   res.status(201).json({ success: true, data: course.modules });
+});
+
+// @desc    Update a module
+// @route   PUT /api/courses/:id/modules/:moduleId
+export const updateModule = catchAsync(async (req, res, next) => {
+  const course = await Course.findById(req.params.id);
+
+  if (!course || course.tutor.toString() !== req.user._id.toString()) {
+    return next(new AppError("Course not found or unauthorized", 404));
+  }
+
+  const module = course.modules.id(req.params.moduleId);
+  if (!module) {
+    return next(new AppError("Module not found", 404));
+  }
+
+  if (req.body.title !== undefined) module.title = req.body.title;
+  if (req.body.description !== undefined)
+    module.description = req.body.description;
+
+  await course.save();
+  res.status(200).json({ success: true, data: course.modules });
+});
+
+// @desc    Delete a module
+// @route   DELETE /api/courses/:id/modules/:moduleId
+export const deleteModule = catchAsync(async (req, res, next) => {
+  const course = await Course.findById(req.params.id);
+
+  if (!course || course.tutor.toString() !== req.user._id.toString()) {
+    return next(new AppError("Course not found or unauthorized", 404));
+  }
+
+  const module = course.modules.id(req.params.moduleId);
+  if (!module) {
+    return next(new AppError("Module not found", 404));
+  }
+
+  // Delete all lecture videos in this module from Cloudinary
+  for (const lecture of module.lectures || []) {
+    if (lecture.videoPublicId) {
+      await deleteFromCloudinary(lecture.videoPublicId, "video");
+    }
+  }
+
+  module.deleteOne();
+  await course.save();
+
+  res
+    .status(200)
+    .json({ success: true, message: "Module deleted", data: course.modules });
 });
