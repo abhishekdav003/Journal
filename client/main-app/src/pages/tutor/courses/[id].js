@@ -54,6 +54,8 @@ export default function CourseEditor() {
     title: "",
     description: "",
     videoUrl: "",
+    videoPublicId: "",
+    duration: 0,
     isPreview: false,
   });
   const [isUploadingVideo, setIsUploadingVideo] = useState(false);
@@ -101,12 +103,23 @@ export default function CourseEditor() {
       const res = await uploadThumbnail(formData);
       const url =
         res.data.data?.thumbnail?.url || res.data.data?.url || res.data.url;
+      const publicId =
+        res.data.data?.thumbnail?.publicId ||
+        res.data.data?.thumbnail?.public_id ||
+        res.data.publicId;
 
       // Update local state immediately
-      setCourse((prev) => ({ ...prev, thumbnail: url }));
+      setCourse((prev) => ({
+        ...prev,
+        thumbnail: url,
+        thumbnailPublicId: publicId || prev.thumbnailPublicId,
+      }));
 
       // Save to backend
-      await updateCourse(id, { thumbnail: url });
+      await updateCourse(id, {
+        thumbnail: url,
+        ...(publicId ? { thumbnailPublicId: publicId } : {}),
+      });
       toast.success("Thumbnail updated!");
     } catch (err) {
       console.error(err);
@@ -143,8 +156,18 @@ export default function CourseEditor() {
 
       const url =
         res.data.data?.video?.url || res.data.data?.url || res.data.url;
+      const publicId =
+        res.data.data?.video?.publicId ||
+        res.data.data?.video?.public_id ||
+        res.data.publicId;
+      const duration = res.data.data?.video?.duration || 0;
 
-      setLectureData((prev) => ({ ...prev, videoUrl: url }));
+      setLectureData((prev) => ({
+        ...prev,
+        videoUrl: url,
+        videoPublicId: publicId || prev.videoPublicId,
+        duration,
+      }));
       toast.success("Video uploaded successfully!");
     } catch (err) {
       console.error(err);
@@ -251,6 +274,8 @@ export default function CourseEditor() {
       title: "",
       description: "",
       videoUrl: "",
+      videoPublicId: "",
+      duration: 0,
       isPreview: false,
     });
     setIsLectureModalOpen(true);
@@ -271,6 +296,8 @@ export default function CourseEditor() {
         title: lectureData.title,
         description: lectureData.description,
         videoUrl: lectureData.videoUrl,
+        videoPublicId: lectureData.videoPublicId,
+        duration: lectureData.duration,
         isPreview: lectureData.isPreview,
         moduleId: activeModuleId,
       });
@@ -279,6 +306,8 @@ export default function CourseEditor() {
         title: "",
         description: "",
         videoUrl: "",
+        videoPublicId: "",
+        duration: 0,
         isPreview: false,
       });
       fetchCourseData(id);

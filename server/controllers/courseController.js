@@ -117,7 +117,26 @@ export const getCourse = catchAsync(async (req, res, next) => {
     !isEnrolled &&
     (!req.user || req.user._id.toString() !== course.tutor._id.toString())
   ) {
-    course.lectures = course.lectures.filter((lecture) => lecture.isPreview);
+    course.lectures = course.lectures.map((lecture) => {
+      if (!lecture.isPreview) {
+        lecture.videoUrl = null;
+        lecture.videoPublicId = null;
+      }
+      return lecture;
+    });
+
+    if (course.modules?.length) {
+      course.modules = course.modules.map((mod) => {
+        mod.lectures = (mod.lectures || []).map((lecture) => {
+          if (!lecture.isPreview) {
+            lecture.videoUrl = null;
+            lecture.videoPublicId = null;
+          }
+          return lecture;
+        });
+        return mod;
+      });
+    }
   }
 
   res.status(200).json({
@@ -139,6 +158,17 @@ export const updateCourse = catchAsync(async (req, res, next) => {
   // Check ownership
   if (course.tutor.toString() !== req.user._id.toString()) {
     return next(new AppError("Not authorized to update this course", 403));
+  }
+
+  // If thumbnail is being replaced, delete the old one from Cloudinary
+  const isThumbnailChanged =
+    req.body.thumbnail && req.body.thumbnail !== course.thumbnail;
+  const isPublicIdChanged =
+    req.body.thumbnailPublicId &&
+    req.body.thumbnailPublicId !== course.thumbnailPublicId;
+
+  if (course.thumbnailPublicId && (isPublicIdChanged || isThumbnailChanged)) {
+    await deleteFromCloudinary(course.thumbnailPublicId, "image");
   }
 
   course = await Course.findByIdAndUpdate(req.params.id, req.body, {
@@ -179,6 +209,17 @@ export const deleteCourse = catchAsync(async (req, res, next) => {
   for (const lecture of course.lectures) {
     if (lecture.videoPublicId) {
       await deleteFromCloudinary(lecture.videoPublicId, "video");
+    }
+  }
+
+  // Delete all module lecture videos from Cloudinary
+  if (course.modules?.length) {
+    for (const mod of course.modules) {
+      for (const lecture of mod.lectures || []) {
+        if (lecture.videoPublicId) {
+          await deleteFromCloudinary(lecture.videoPublicId, "video");
+        }
+      }
     }
   }
 
@@ -331,6 +372,15 @@ export const updateLecture = catchAsync(async (req, res, next) => {
     return next(new AppError("Lecture not found", 404));
   }
 
+  // If video is being replaced, delete old video from Cloudinary
+  if (
+    req.body.videoPublicId &&
+    lecture.videoPublicId &&
+    req.body.videoPublicId !== lecture.videoPublicId
+  ) {
+    await deleteFromCloudinary(lecture.videoPublicId, "video");
+  }
+
   // Update lecture fields
   Object.assign(lecture, req.body);
   await course.save();
@@ -466,6 +516,13 @@ export const deleteModule = catchAsync(async (req, res, next) => {
   const module = course.modules.id(req.params.moduleId);
   if (!module) {
     return next(new AppError("Module not found", 404));
+  }
+
+  // Delete all lecture videos in this module from Cloudinary
+  for (const lecture of module.lectures || []) {
+    if (lecture.videoPublicId) {
+      await deleteFromCloudinary(lecture.videoPublicId, "video");
+    }
   }
 
   module.deleteOne();
