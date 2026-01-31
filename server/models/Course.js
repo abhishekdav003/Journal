@@ -6,17 +6,22 @@ const lectureSchema = new mongoose.Schema({
     required: [true, "Lecture title is required"],
     trim: true,
   },
+  description: {
+    type: String,
+    default: "",
+    trim: true,
+  },
   videoUrl: {
     type: String,
     required: [true, "Video URL is required"],
   },
   videoPublicId: {
     type: String,
-    required: [true, "Video public ID is required"],
+    default: null,
   },
   duration: {
     type: Number,
-    required: [true, "Video duration is required"],
+    default: 0,
   },
   isPreview: {
     type: Boolean,
@@ -28,7 +33,25 @@ const lectureSchema = new mongoose.Schema({
   },
   moduleId: {
     type: mongoose.Schema.Types.ObjectId,
-    required: [true, "Lecture must belong to a module"],
+    default: null,
+  },
+});
+
+const moduleSchema = new mongoose.Schema({
+  title: {
+    type: String,
+    required: [true, "Module title is required"],
+    trim: true,
+  },
+  description: {
+    type: String,
+    default: "",
+    trim: true,
+  },
+  lectures: [lectureSchema],
+  order: {
+    type: Number,
+    required: true,
   },
 });
 
@@ -80,7 +103,8 @@ const courseSchema = new mongoose.Schema(
       ref: "User",
       required: [true, "Tutor is required"],
     },
-    lectures: [lectureSchema],
+    modules: [moduleSchema],
+    lectures: [lectureSchema], // Keep for backward compatibility
     enrolledStudents: [
       {
         type: mongoose.Schema.Types.ObjectId,
@@ -105,13 +129,6 @@ const courseSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
-    modules: [
-      {
-        title: { type: String, required: true },
-        order: { type: Number, required: true },
-        description: String
-      }
-    ],
     isArchived: {
       type: Boolean,
       default: false,

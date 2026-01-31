@@ -43,6 +43,10 @@ export const createCourse = (data) => API.post("/courses", data);
 export const getCourse = (id) => API.get(`/courses/${id}`);
 export const updateCourse = (id, data) => API.put(`/courses/${id}`, data);
 export const addModule = (id, data) => API.post(`/courses/${id}/modules`, data);
+export const updateModule = (id, moduleId, data) =>
+  API.put(`/courses/${id}/modules/${moduleId}`, data);
+export const deleteModule = (id, moduleId) =>
+  API.delete(`/courses/${id}/modules/${moduleId}`);
 export const addLecture = (id, data) =>
   API.post(`/courses/${id}/lectures`, data);
 export const updateLecture = (id, lectureId, data) =>
@@ -52,10 +56,11 @@ export const deleteLecture = (id, lectureId) =>
 export const archiveCourse = (id) => API.patch(`/courses/${id}/archive`);
 
 // Video Upload
-export const uploadVideo = (formData) =>
+export const uploadVideo = (formData, onUploadProgress) =>
   API.post("/videos/upload", formData, {
     headers: { "Content-Type": "multipart/form-data" },
     timeout: 300000, // 5 minutes for large videos
+    onUploadProgress: onUploadProgress,
   });
 export const uploadThumbnail = (formData) =>
   API.post("/videos/thumbnail", formData, {
