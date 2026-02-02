@@ -9,6 +9,7 @@ import {
   changePasswordAuth,
   updateProfile,
   uploadAvatar,
+  getTutorProfile,
 } from "../controllers/authController.js";
 import { protect } from "../middleware/auth.js";
 import { validateRegister, validateLogin } from "../middleware/validate.js";
@@ -24,6 +25,7 @@ router.post("/register", validateRegister, register);
 router.post("/login", validateLogin, login);
 router.post("/forgot-password", forgotPassword);
 router.post("/reset-password/:token", resetPassword);
+router.get("/users/:id", getTutorProfile);
 
 // Protected routes
 router.use(protect); // All routes after this are protected
