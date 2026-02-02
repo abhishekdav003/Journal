@@ -38,6 +38,9 @@ export const getPaymentHistory = () => API.get("/payments/history");
 export const getTutorCourses = () => API.get("/courses/tutor/my-courses");
 export const togglePublishCourse = (id) => API.patch(`/courses/${id}/publish`);
 
+// Public Course APIs
+export const getAllCourses = (params) => API.get("/courses", { params });
+
 // Course Management (Tutor)
 export const createCourse = (data) => API.post("/courses", data);
 export const getCourse = (id) => API.get(`/courses/${id}`);
@@ -59,7 +62,7 @@ export const archiveCourse = (id) => API.patch(`/courses/${id}/archive`);
 export const uploadVideo = (formData, onUploadProgress) =>
   API.post("/videos/upload", formData, {
     headers: { "Content-Type": "multipart/form-data" },
-    timeout: 300000, // 5 minutes for large videos
+    timeout: 1800000, // 30 minutes for large videos
     onUploadProgress: onUploadProgress,
   });
 export const uploadThumbnail = (formData) =>
