@@ -30,11 +30,11 @@ const enrollmentSchema = new mongoose.Schema(
         completedAt: Date,
       },
     ],
-    completedLectures: [
-      { 
-        type: mongoose.Schema.Types.ObjectId 
-      }
-    ],
+    // completedLectures: [
+    //   { 
+    //     type: mongoose.Schema.Types.ObjectId 
+    //   }
+    // ],
     completionPercentage: {
       type: Number,
       default: 0,

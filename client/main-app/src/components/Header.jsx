@@ -9,6 +9,8 @@ import {
   FiSettings,
   FiCreditCard,
   FiLogOut,
+  FiSearch,
+  FiX,
 } from "react-icons/fi";
 
 export default function Header() {
@@ -17,7 +19,10 @@ export default function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [storageUser, setStorageUser] = useState(null);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const dropdownRef = useRef(null);
+  const searchRef = useRef(null);
 
   // Listen for auth updates (login, profile changes)
   useEffect(() => {
@@ -80,12 +85,21 @@ export default function Header() {
 
   const navItems = [
     { name: "Home", path: "/" },
+    { name: "Courses", path: "/courses" },
     { name: "Teaching", path: "/teaching" },
     { name: "Training", path: "/training" },
-    { name: "Research", path: "/research" },
   ];
 
   const isActive = (path) => router.pathname === path;
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      router.push(`/courses?search=${encodeURIComponent(searchQuery)}`);
+      setSearchOpen(false);
+      setSearchQuery("");
+    }
+  };
 
   return (
     // FIX 1: Removed 'overflow-hidden' form header tag.
@@ -107,25 +121,51 @@ export default function Header() {
           </span>
         </Link>
 
-        {/* --- CENTER: DESKTOP NAVIGATION (Pill Design) --- */}
-        <nav className="hidden md:flex items-center space-x-2">
-          {navItems.map((item) => (
-            <Link key={item.name} href={item.path}>
-              <span
-                className={`px-4 py-2 rounded-full text-sm font-bold transition-all duration-300 cursor-pointer ${
-                  isActive(item.path)
-                    ? "bg-purple-600 text-white shadow-lg shadow-purple-500/50"
-                    : "text-gray-300 hover:bg-[#2B2B40] hover:text-white"
-                }`}
-              >
-                {item.name}
-              </span>
-            </Link>
-          ))}
-        </nav>
+        {/* --- CENTER: DESKTOP NAVIGATION (Pill Design) + SEARCH --- */}
+        <div className="hidden md:flex items-center space-x-4">
+          {/* Navigation */}
+          <nav className="flex items-center space-x-2">
+            {navItems.map((item) => (
+              <Link key={item.name} href={item.path}>
+                <span
+                  className={`px-4 py-2 rounded-full text-sm font-bold transition-all duration-300 cursor-pointer ${
+                    isActive(item.path)
+                      ? "bg-purple-600 text-white shadow-lg shadow-purple-500/50"
+                      : "text-gray-300 hover:bg-[#2B2B40] hover:text-white"
+                  }`}
+                >
+                  {item.name}
+                </span>
+              </Link>
+            ))}
+          </nav>
+
+          {/* Search Bar */}
+          <form
+            onSubmit={handleSearch}
+            className="flex items-center gap-2 bg-[#2B2B40] rounded-full px-4 py-2 hover:bg-[#3B3B50] transition-all"
+          >
+            <FiSearch className="text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search courses..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="bg-transparent text-white placeholder-gray-400 outline-none text-sm w-32"
+            />
+          </form>
+        </div>
 
         {/* --- RIGHT: AUTH BUTTONS & HAMBURGER --- */}
         <div className="flex items-center gap-2 md:gap-4">
+          {/* Mobile Search Icon */}
+          <button
+            onClick={() => setSearchOpen(!searchOpen)}
+            className="md:hidden text-gray-300 hover:text-white transition-all"
+          >
+            <FiSearch size={20} />
+          </button>
+
           {currentUser ? (
             /* LOGGED IN STATE */
             <div

@@ -3,7 +3,9 @@ import {
   getEnrollment,
   updateProgress,
   getCourseEnrollments,
-  getTutorStudents, // CHANGE 1: Yahan ye import add karein
+  getTutorStudents,
+  checkEnrollment,
+  createEnrollment,
 } from "../controllers/enrollmentController.js";
 import { protect, restrictTo } from "../middleware/auth.js";
 
@@ -12,13 +14,12 @@ const router = express.Router();
 // All enrollment routes require authentication
 router.use(protect);
 
+router.get("/check/:courseId", checkEnrollment);
+router.post("/", createEnrollment);
+
 // --- TUTOR ROUTES ---
 // CHANGE 2: Ye route sabse uppar add karein (student routes se pehle)
-router.get(
-  "/tutor/my-students",
-  restrictTo("tutor"),
-  getTutorStudents
-);
+router.get("/tutor/my-students", restrictTo("tutor"), getTutorStudents);
 
 router.get(
   "/course/:courseId/students",

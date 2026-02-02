@@ -3,6 +3,61 @@ import Course from "../models/Course.js";
 import { AppError } from "../utils/appError.js";
 import { catchAsync } from "../utils/catchAsync.js";
 
+// @desc    Check if user is enrolled in a course
+// @route   GET /api/enrollments/check/:courseId
+// @access  Private
+export const checkEnrollment = catchAsync(async (req, res, next) => {
+  const enrollment = await Enrollment.findOne({
+    student: req.user._id,
+    course: req.params.courseId,
+  });
+
+  res.status(200).json({
+    success: true,
+    enrolled: !!enrollment,
+    data: enrollment,
+  });
+});
+
+// @desc    Enroll in a course
+// @route   POST /api/enrollments
+// @access  Private/Student
+export const createEnrollment = catchAsync(async (req, res, next) => {
+  const { courseId } = req.body;
+
+  const course = await Course.findById(courseId);
+  if (!course) {
+    return next(new AppError("Course not found", 404));
+  }
+
+  const existingEnrollment = await Enrollment.findOne({
+    student: req.user._id,
+    course: courseId,
+  });
+
+  if (existingEnrollment) {
+    return next(new AppError("Already enrolled in this course", 400));
+  }
+
+  const enrollment = await Enrollment.create({
+    student: req.user._id,
+    course: courseId,
+    enrolledAt: Date.now(),
+    progress: {
+      completedLectures: [],
+      lastActiveAt: Date.now(),
+    },
+  });
+
+  // Optionally update course student count
+  // await Course.findByIdAndUpdate(courseId, { $inc: { enrolledStudents: 1 } });
+
+  res.status(201).json({
+    success: true,
+    data: { enrollment },
+  });
+});
+
 // @desc    Get enrollment details
 // @route   GET /api/enrollments/:courseId
 // @access  Private/Student
@@ -94,13 +149,12 @@ export const getCourseEnrollments = catchAsync(async (req, res, next) => {
   });
 });
 
-
 // @desc    Get all students enrolled in a tutor's courses
 // @route   GET /api/enrollments/tutor/my-students
 export const getTutorStudents = catchAsync(async (req, res, next) => {
   // Find all courses owned by this tutor
   const courses = await Course.find({ tutor: req.user._id });
-  const courseIds = courses.map(c => c._id);
+  const courseIds = courses.map((c) => c._id);
 
   // Find all enrollments for those courses
   const enrollments = await Enrollment.find({ course: { $in: courseIds } })
@@ -111,6 +165,6 @@ export const getTutorStudents = catchAsync(async (req, res, next) => {
   res.status(200).json({
     success: true,
     count: enrollments.length,
-    data: { enrollments }
+    data: { enrollments },
   });
 });

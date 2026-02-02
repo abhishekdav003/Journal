@@ -23,7 +23,7 @@ export const getDashboardStats = catchAsync(async (req, res) => {
     // 2. Revenue Calculation
     const payments = await Payment.find({ 
       course: { $in: courseIds },
-      status: 'success' 
+      status: 'completed' 
     });
     const totalRevenue = payments.reduce((acc, curr) => acc + curr.amount, 0);
 
@@ -32,7 +32,7 @@ export const getDashboardStats = catchAsync(async (req, res) => {
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
     
     const monthlyRevenue = await Payment.aggregate([
-      { $match: { course: { $in: courseIds }, status: 'success', createdAt: { $gte: sixMonthsAgo } } },
+      { $match: { course: { $in: courseIds }, status: 'completed', createdAt: { $gte: sixMonthsAgo } } },
       { $group: { _id: { $month: "$createdAt" }, total: { $sum: "$amount" } } },
       { $sort: { "_id": 1 } }
     ]);

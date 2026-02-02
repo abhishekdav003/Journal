@@ -80,7 +80,7 @@ export const getCourse = catchAsync(async (req, res, next) => {
 
   const course = await Course.findById(req.params.id).populate(
     "tutor",
-    "name email",
+    "name email avatar",
   );
 
   if (!course) {
