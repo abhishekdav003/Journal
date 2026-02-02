@@ -1,4 +1,5 @@
 import User from "../models/User.js";
+import Course from "../models/Course.js";
 import crypto from "crypto";
 import { generateToken } from "../utils/jwt.js";
 import { AppError } from "../utils/appError.js";
@@ -271,5 +272,45 @@ export const changePasswordAuth = catchAsync(async (req, res, next) => {
     message: "Password changed",
     token,
     data: { user },
+  });
+});
+
+// @desc    Get tutor profile with their courses
+// @route   GET /api/users/:id
+// @access  Public
+export const getTutorProfile = catchAsync(async (req, res, next) => {
+  const { id } = req.params;
+
+  // Get tutor with their courses
+  const user = await User.findById(id)
+    .select("name email avatar bio role")
+    .lean();
+
+  if (!user) {
+    return next(new AppError("Tutor not found", 404));
+  }
+
+  if (user.role !== "tutor") {
+    return next(new AppError("User is not a tutor", 400));
+  }
+
+  // Get all published courses by this tutor
+  const courses = await Course.find({
+    tutor: id,
+    isPublished: true,
+  })
+    .select(
+      "_id title description thumbnail price originalPrice level rating totalRatings enrolledStudents",
+    )
+    .lean();
+
+  res.status(200).json({
+    success: true,
+    data: {
+      user: {
+        ...user,
+        courses: courses || [],
+      },
+    },
   });
 });
