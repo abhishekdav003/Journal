@@ -49,12 +49,6 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
-    phone: {
-      type: String,
-    },
-    bio: {
-      type: String,
-    },
     avatar: {
       type: String,
     },
