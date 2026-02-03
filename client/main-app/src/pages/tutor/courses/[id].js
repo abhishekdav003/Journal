@@ -440,7 +440,7 @@ export default function CourseEditor() {
                     className="border border-gray-200 rounded-2xl overflow-hidden bg-white"
                   >
                     <div
-                      className="bg-gradient-to-r from-purple-50 to-purple-100/50 p-4 flex justify-between items-start cursor-pointer hover:from-purple-100 hover:to-purple-100 transition"
+                      className="bg-linear-to-r from-purple-50 to-purple-100/50 p-4 flex justify-between items-start cursor-pointer hover:from-purple-100 hover:to-purple-100 transition"
                       onClick={() => toggleModule(mIndex)}
                     >
                       <div className="flex items-start gap-3 flex-1">
@@ -515,7 +515,7 @@ export default function CourseEditor() {
                             >
                               <div className="flex items-start gap-3 flex-1">
                                 <FiCheckCircle
-                                  className="text-green-500 flex-shrink-0 mt-1"
+                                  className="text-green-500 shrink-0 mt-1"
                                   size={18}
                                 />
                                 <div className="flex-1 min-w-0">
@@ -546,7 +546,7 @@ export default function CourseEditor() {
                                   )}
                                 </div>
                               </div>
-                              <div className="flex items-center gap-2 ml-4 flex-shrink-0">
+                              <div className="flex items-center gap-2 ml-4 shrink-0">
                                 <button
                                   onClick={() =>
                                     handleTogglePreview(
@@ -958,7 +958,7 @@ export default function CourseEditor() {
       )}
 
       {confirmDialog.open && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+        <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
             <h3 className="text-lg font-bold text-gray-900 mb-2">
               Confirm Delete
