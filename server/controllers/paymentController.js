@@ -79,8 +79,8 @@ export const createOrder = catchAsync(async (req, res, next) => {
       orderId: order.id,
       amount: order.amount,
       currency: order.currency,
-      keyId: process.env.RAZORPAY_KEY_ID,
-      payment,
+      keyId: process.env.RAZORPAY_KEY_ID, // Return key for frontend
+      courseTitle: course.title,
     },
   });
 });
@@ -120,23 +120,19 @@ export const verifyPayment = catchAsync(async (req, res, next) => {
   payment.status = "completed";
   await payment.save();
 
-  // Get course details
-  const course = await Course.findById(payment.course);
-
-  // Create enrollment
+  // Create enrollment with payment reference
   const enrollment = await Enrollment.create({
     student: payment.student,
     course: payment.course,
     payment: payment._id,
-    progress: course.lectures.map((lecture) => ({
-      lecture: lecture._id,
-      completed: false,
-    })),
+    progress: [], // Empty initially
+    completionPercentage: 0,
   });
 
-  // Add student to course
-  course.enrolledStudents.push(payment.student);
-  await course.save();
+  // Add student to course enrolled students
+  await Course.findByIdAndUpdate(payment.course, {
+    $addToSet: { enrolledStudents: payment.student },
+  });
 
   res.status(200).json({
     success: true,
@@ -157,20 +153,40 @@ export const getPaymentHistory = catchAsync(async (req, res) => {
     delete query.student;
   }
 
+  // Get unique payments (avoid duplicates)
   const payments = await Payment.find(query)
     .populate("course", "title thumbnail")
     .populate("student", "name email")
     .sort("-createdAt");
 
-  const total = payments
+  // Remove duplicate payments for same course
+  const uniquePayments = payments.reduce((acc, payment) => {
+    const existing = acc.find(
+      (p) => p.course?._id?.toString() === payment.course?._id?.toString(),
+    );
+    if (!existing) {
+      acc.push(payment);
+    } else {
+      // Keep the completed one if exists, otherwise keep the first
+      if (payment.status === "completed" && existing.status !== "completed") {
+        const index = acc.findIndex(
+          (p) => p.course?._id?.toString() === payment.course?._id?.toString(),
+        );
+        acc[index] = payment;
+      }
+    }
+    return acc;
+  }, []);
+
+  const total = uniquePayments
     .filter((p) => p.status === "completed")
     .reduce((sum, p) => sum + p.amount, 0);
 
   res.status(200).json({
     success: true,
-    count: payments.length,
+    count: uniquePayments.length,
     totalAmount: total,
-    data: { payments },
+    data: { payments: uniquePayments },
   });
 });
 
@@ -230,5 +246,80 @@ export const requestRefund = catchAsync(async (req, res, next) => {
     success: true,
     message: "Refund processed successfully",
     data: { refund },
+  });
+});
+
+// @desc    Retry failed/expired payment
+// @route   POST /api/payments/:id/retry
+// @access  Private/Student
+export const retryPayment = catchAsync(async (req, res, next) => {
+  if (!razorpay) {
+    return next(new AppError("Payment provider not configured", 503));
+  }
+
+  const oldPayment = await Payment.findById(req.params.id).populate("course");
+
+  if (!oldPayment) {
+    return next(new AppError("Payment not found", 404));
+  }
+
+  // Check ownership
+  if (oldPayment.student.toString() !== req.user._id.toString()) {
+    return next(new AppError("Not authorized", 403));
+  }
+
+  // Only allow retry for failed/expired payments
+  if (!["failed", "expired", "pending"].includes(oldPayment.status)) {
+    return next(
+      new AppError(
+        "Only failed, expired or pending payments can be retried",
+        400,
+      ),
+    );
+  }
+
+  // Check if already enrolled
+  const existingEnrollment = await Enrollment.findOne({
+    student: req.user._id,
+    course: oldPayment.course._id,
+  });
+
+  if (existingEnrollment) {
+    return next(new AppError("Already enrolled in this course", 400));
+  }
+
+  // Create new Razorpay order
+  const options = {
+    amount: oldPayment.amount * 100,
+    currency: "INR",
+    receipt: `receipt_retry_${Date.now()}`,
+    notes: {
+      courseId: oldPayment.course._id.toString(),
+      studentId: req.user._id.toString(),
+      tutorId: oldPayment.tutor.toString(),
+      previousPaymentId: oldPayment._id.toString(),
+    },
+  };
+
+  const order = await razorpay.orders.create(options);
+
+  // Create new payment record
+  const newPayment = await Payment.create({
+    student: req.user._id,
+    course: oldPayment.course._id,
+    tutor: oldPayment.tutor,
+    amount: oldPayment.amount,
+    razorpayOrderId: order.id,
+  });
+
+  res.status(201).json({
+    success: true,
+    data: {
+      orderId: order.id,
+      amount: order.amount,
+      currency: order.currency,
+      keyId: process.env.RAZORPAY_KEY_ID,
+      courseTitle: oldPayment.course.title,
+    },
   });
 });
