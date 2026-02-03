@@ -271,8 +271,22 @@ export default function CoursesPage() {
                           {/* Footer */}
                           <div className="flex items-center justify-between pt-4 border-t border-gray-100">
                             <div className="flex items-center gap-2">
-                              <div className="w-10 h-10 bg-linear-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white font-bold">
-                                {course.tutor?.name?.charAt(0) || "T"}
+                              <div className="w-10 h-10 bg-linear-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white font-bold overflow-hidden">
+                                {course.tutor?.avatar ? (
+                                  <img
+                                    src={course.tutor.avatar}
+                                    alt={course.tutor?.name || "Tutor"}
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => {
+                                      e.target.style.display = "none";
+                                      e.target.parentElement.innerHTML = `<span class="text-white font-bold">${(course.tutor?.name || "T").charAt(0).toUpperCase()}</span>`;
+                                    }}
+                                  />
+                                ) : (
+                                  course.tutor?.name
+                                    ?.charAt(0)
+                                    ?.toUpperCase() || "T"
+                                )}
                               </div>
                               <div>
                                 <p className="text-sm font-bold text-gray-900">

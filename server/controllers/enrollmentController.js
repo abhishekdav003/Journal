@@ -93,7 +93,7 @@ export const getEnrollment = catchAsync(async (req, res, next) => {
     course: req.params.courseId,
   }).populate({
     path: "course",
-    populate: { path: "tutor", select: "name email" },
+    populate: { path: "tutor", select: "name email avatar" },
   });
 
   if (!enrollment) {

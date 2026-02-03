@@ -10,37 +10,58 @@ export const getDashboardStats = catchAsync(async (req, res) => {
   // --------------------------
   // TUTOR DASHBOARD LOGIC
   // --------------------------
-  if (req.user.role === 'tutor') {
+  if (req.user.role === "tutor") {
     const tutorId = req.user._id;
 
     // 1. Basic Counters
     const totalCourses = await Course.countDocuments({ tutor: tutorId });
-    
-    const courses = await Course.find({ tutor: tutorId }).select('_id');
-    const courseIds = courses.map(c => c._id);
-    const totalStudents = await Enrollment.countDocuments({ course: { $in: courseIds } });
+
+    const courses = await Course.find({ tutor: tutorId }).select("_id");
+    const courseIds = courses.map((c) => c._id);
+    const totalStudents = await Enrollment.countDocuments({
+      course: { $in: courseIds },
+    });
 
     // 2. Revenue Calculation
-    const payments = await Payment.find({ 
+    const payments = await Payment.find({
       course: { $in: courseIds },
-      status: 'completed' 
+      status: "completed",
     });
     const totalRevenue = payments.reduce((acc, curr) => acc + curr.amount, 0);
 
     // 3. Revenue Graph Data (Last 6 Months)
     const sixMonthsAgo = new Date();
     sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-    
+
     const monthlyRevenue = await Payment.aggregate([
-      { $match: { course: { $in: courseIds }, status: 'completed', createdAt: { $gte: sixMonthsAgo } } },
+      {
+        $match: {
+          course: { $in: courseIds },
+          status: "completed",
+          createdAt: { $gte: sixMonthsAgo },
+        },
+      },
       { $group: { _id: { $month: "$createdAt" }, total: { $sum: "$amount" } } },
-      { $sort: { "_id": 1 } }
+      { $sort: { _id: 1 } },
     ]);
 
-    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-    const graphData = monthlyRevenue.map(item => ({
+    const monthNames = [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ];
+    const graphData = monthlyRevenue.map((item) => ({
       name: monthNames[item._id - 1],
-      revenue: item.total
+      revenue: item.total,
     }));
 
     return res.status(200).json({
@@ -50,8 +71,8 @@ export const getDashboardStats = catchAsync(async (req, res) => {
         totalStudents,
         totalRevenue,
         graphData,
-        recentTransactions: payments.slice(0, 5)
-      }
+        recentTransactions: payments.slice(0, 5),
+      },
     });
   }
 
@@ -64,7 +85,7 @@ export const getDashboardStats = catchAsync(async (req, res) => {
     .populate({
       path: "course",
       select: "title thumbnail category tutor sections",
-      populate: { path: "tutor", select: "name email" },
+      populate: { path: "tutor", select: "name email avatar" },
     })
     .sort({ createdAt: -1 });
 
@@ -109,8 +130,14 @@ export const getDashboardStats = catchAsync(async (req, res) => {
     .select("amount status createdAt")
     .populate("course", "title");
 
-  const overallProgress = enrollments.length > 0
-      ? Math.round(enrollments.reduce((sum, e) => sum + (e.completionPercentage || 0), 0) / enrollments.length)
+  const overallProgress =
+    enrollments.length > 0
+      ? Math.round(
+          enrollments.reduce(
+            (sum, e) => sum + (e.completionPercentage || 0),
+            0,
+          ) / enrollments.length,
+        )
       : 0;
 
   const coursePerformance = activeCourses.map((course) => ({
