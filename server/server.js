@@ -13,6 +13,7 @@ import videoRoutes from "./routes/videoRoutes.js";
 import dashboardRoutes from "./routes/dashboardRoutes.js";
 import reviewRoutes from "./routes/reviewRoutes.js";
 import statsRoutes from "./routes/statsRoutes.js";
+import questionRoutes from "./routes/questionRoutes.js";
 import { errorHandler, notFound } from "./middleware/errorHandler.js";
 import { logger } from "./utils/logger.js";
 import { startPaymentCleanup } from "./scripts/cleanupExpiredPayments.js";
@@ -70,6 +71,7 @@ app.use("/api/videos", videoRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/reviews", reviewRoutes);
 app.use("/api/stats", statsRoutes);
+app.use("/api/questions", questionRoutes);
 
 // 404 handler
 app.use(notFound);

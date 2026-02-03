@@ -6,6 +6,11 @@ import {
   getCourseReviews,
   createReview,
   updateReview,
+  getCourseQuestions,
+  createQuestion,
+  answerQuestion,
+  updateLectureProgress,
+  getEnrollmentProgress,
 } from "@/services/apiService";
 import { useAuth } from "@/context/AuthContext";
 import toast from "react-hot-toast";
@@ -41,6 +46,17 @@ export default function LearnCourse() {
   const [submittingReview, setSubmittingReview] = useState(false);
   const [userReview, setUserReview] = useState(null);
   const [isEditingReview, setIsEditingReview] = useState(false);
+  const [questions, setQuestions] = useState([]);
+  const [newQuestion, setNewQuestion] = useState("");
+  const [submittingQuestion, setSubmittingQuestion] = useState(false);
+  const [answeringQuestionId, setAnsweringQuestionId] = useState(null);
+  const [newAnswer, setNewAnswer] = useState("");
+  const [enrollment, setEnrollment] = useState(null);
+  const [completedLectures, setCompletedLectures] = useState(new Set());
+  const [videoProgress, setVideoProgress] = useState(0);
+  const [showCompleteButton, setShowCompleteButton] = useState(false);
+  const [videoRef, setVideoRef] = useState(null);
+  const [showCompletionMessage, setShowCompletionMessage] = useState(false);
 
   const { id } = router.query;
 
@@ -55,6 +71,24 @@ export default function LearnCourse() {
       fetchReviews();
     }
   }, [id, activeTab]);
+
+  useEffect(() => {
+    if (id && activeTab === "q&a") {
+      fetchQuestions();
+    }
+  }, [id, activeTab]);
+
+  useEffect(() => {
+    if (id && user) {
+      fetchEnrollmentProgress();
+    }
+  }, [id, user]);
+
+  useEffect(() => {
+    // Reset video progress when lecture changes
+    setVideoProgress(0);
+    setShowCompleteButton(false);
+  }, [activeLecture]);
 
   const fetchCourse = async () => {
     try {
@@ -234,6 +268,131 @@ export default function LearnCourse() {
     setIsEditingReview(false);
   };
 
+  const fetchQuestions = async () => {
+    try {
+      const response = await getCourseQuestions(id);
+      if (response.data.success) {
+        setQuestions(response.data.data.questions);
+      }
+    } catch (error) {
+      console.error("Failed to fetch questions:", error);
+    }
+  };
+
+  const handleSubmitQuestion = async () => {
+    if (!newQuestion.trim()) {
+      toast.error("Please enter a question");
+      return;
+    }
+
+    try {
+      setSubmittingQuestion(true);
+      const response = await createQuestion(id, {
+        question: newQuestion,
+        lectureId: activeLecture?._id,
+      });
+
+      if (response.data.success) {
+        toast.success("Question posted successfully!");
+        setNewQuestion("");
+        fetchQuestions();
+      }
+    } catch (error) {
+      const message =
+        error.response?.data?.message || "Failed to post question";
+      toast.error(message);
+    } finally {
+      setSubmittingQuestion(false);
+    }
+  };
+
+  const handleSubmitAnswer = async (questionId) => {
+    if (!newAnswer.trim()) {
+      toast.error("Please enter an answer");
+      return;
+    }
+
+    try {
+      const response = await answerQuestion(questionId, {
+        answer: newAnswer,
+      });
+
+      if (response.data.success) {
+        toast.success("Answer posted successfully!");
+        setNewAnswer("");
+        setAnsweringQuestionId(null);
+        fetchQuestions();
+      }
+    } catch (error) {
+      const message = error.response?.data?.message || "Failed to post answer";
+      toast.error(message);
+    }
+  };
+
+  const fetchEnrollmentProgress = async () => {
+    try {
+      const response = await getEnrollmentProgress(id);
+      if (response.data.success) {
+        setEnrollment(response.data.data.enrollment);
+        const completed = new Set(
+          response.data.data.enrollment.progress
+            .filter((p) => p.completed)
+            .map((p) => p.lecture.toString()),
+        );
+        setCompletedLectures(completed);
+      }
+    } catch (error) {
+      console.error("Failed to fetch enrollment progress:", error);
+    }
+  };
+
+  const handleMarkLectureComplete = async (lectureId, completed) => {
+    try {
+      await updateLectureProgress(id, {
+        lectureId,
+        completed,
+      });
+
+      // Show completion message for 1 second
+      setShowCompletionMessage(true);
+      setTimeout(() => {
+        setShowCompletionMessage(false);
+      }, 1000);
+
+      const newCompleted = new Set(completedLectures);
+      if (completed) {
+        newCompleted.add(lectureId);
+      } else {
+        newCompleted.delete(lectureId);
+      }
+      setCompletedLectures(newCompleted);
+      fetchEnrollmentProgress(); // Refresh to get updated percentage
+    } catch (error) {
+      console.error("Failed to update progress:", error);
+      toast.error("Failed to update progress");
+    }
+  };
+
+  const handleVideoProgress = (e) => {
+    const video = e.target;
+    const progress = (video.currentTime / video.duration) * 100;
+    setVideoProgress(progress);
+
+    // Show complete button after 95%
+    if (progress >= 95) {
+      setShowCompleteButton(true);
+    }
+
+    // Auto-complete at 98%
+    if (
+      progress >= 98 &&
+      activeLecture &&
+      !completedLectures.has(activeLecture._id)
+    ) {
+      handleMarkLectureComplete(activeLecture._id, true);
+    }
+  };
+
   if (loading || !course) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-[#1c1d1f]">
@@ -273,6 +432,14 @@ export default function LearnCourse() {
               <span>
                 {Math.floor(stats.duration / 60)}h {stats.duration % 60}m
               </span>
+              {enrollment && (
+                <>
+                  <span>•</span>
+                  <span className="text-purple-400 font-semibold">
+                    {enrollment.completionPercentage}% Complete
+                  </span>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -292,16 +459,46 @@ export default function LearnCourse() {
           {/* Video Player */}
           <div className="relative bg-black" style={{ height: "60vh" }}>
             {activeLecture?.videoUrl ? (
-              <video
-                key={activeLecture._id}
-                src={activeLecture.videoUrl}
-                controls
-                controlsList="nodownload"
-                className="w-full h-full"
-                autoPlay
-              >
-                Your browser does not support the video tag.
-              </video>
+              <>
+                <video
+                  key={activeLecture._id}
+                  ref={setVideoRef}
+                  src={activeLecture.videoUrl}
+                  controls
+                  controlsList="nodownload"
+                  className="w-full h-full"
+                  autoPlay
+                  onTimeUpdate={handleVideoProgress}
+                >
+                  Your browser does not support the video tag.
+                </video>
+                {/* Temporary Completion Message */}
+                {showCompletionMessage && (
+                  <div className="absolute bottom-4 right-4">
+                    <div className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm bg-green-600 text-white shadow-lg animate-pulse">
+                      <FiCheckCircle size={16} />
+                      Completed!
+                    </div>
+                  </div>
+                )}
+                {/* Mark Complete Button - Only show after 95% and NOT if already completed */}
+                {activeLecture &&
+                  showCompleteButton &&
+                  !completedLectures.has(activeLecture._id) &&
+                  !showCompletionMessage && (
+                    <div className="absolute bottom-4 right-4">
+                      <button
+                        onClick={() => {
+                          handleMarkLectureComplete(activeLecture._id, true);
+                        }}
+                        className="flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-sm transition-all shadow-lg bg-purple-600 hover:bg-purple-700 text-white cursor-pointer"
+                      >
+                        <FiCheckCircle size={16} />
+                        Mark as Complete
+                      </button>
+                    </div>
+                  )}
+              </>
             ) : (
               <div className="flex items-center justify-center h-full bg-gray-900">
                 <div className="text-center">
@@ -382,32 +579,171 @@ export default function LearnCourse() {
 
               {activeTab === "q&a" && (
                 <div>
-                  <div className="mb-6">
+                  {/* Ask Question Form */}
+                  <div className="mb-6 p-6 bg-[#2d2f31] rounded-lg">
                     <h3 className="text-lg font-semibold mb-3">
                       Ask a Question
                     </h3>
+                    {activeLecture && (
+                      <p className="text-xs text-gray-400 mb-3">
+                        About: {activeLecture.title}
+                      </p>
+                    )}
                     <div className="space-y-3">
                       <textarea
+                        value={newQuestion}
+                        onChange={(e) => setNewQuestion(e.target.value)}
                         placeholder="Type your question here..."
-                        className="w-full bg-[#2d2f31] border border-gray-700 rounded-lg p-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-600 resize-none"
+                        className="w-full bg-[#1c1d1f] border border-gray-700 rounded-lg p-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-600 resize-none"
                         rows={4}
                       />
-                      <button className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-lg text-sm font-semibold transition-colors">
-                        Post Question
+                      <button
+                        onClick={handleSubmitQuestion}
+                        disabled={submittingQuestion}
+                        className="bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-6 py-2 rounded-lg text-sm font-semibold transition-colors"
+                      >
+                        {submittingQuestion ? "Posting..." : "Post Question"}
                       </button>
                     </div>
                   </div>
 
+                  {/* Questions List */}
                   <div className="border-t border-gray-700 pt-6">
                     <h3 className="text-lg font-semibold mb-4">
-                      All Questions
+                      All Questions ({questions.length})
                     </h3>
-                    <div className="text-center py-8">
-                      <FiBookOpen className="text-5xl text-gray-600 mx-auto mb-3" />
-                      <p className="text-gray-400 text-sm">
-                        No questions yet. Be the first to ask!
-                      </p>
-                    </div>
+                    {questions.length > 0 ? (
+                      <div className="space-y-4">
+                        {questions.map((question) => (
+                          <div
+                            key={question._id}
+                            className="p-4 bg-[#2d2f31] rounded-lg"
+                          >
+                            {/* Question */}
+                            <div className="flex items-start gap-3 mb-3">
+                              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center text-white font-bold overflow-hidden shrink-0">
+                                {question.student?.avatar ? (
+                                  <img
+                                    src={question.student.avatar}
+                                    alt={question.student.name}
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  question.student?.name
+                                    ?.charAt(0)
+                                    .toUpperCase() || "S"
+                                )}
+                              </div>
+                              <div className="flex-1">
+                                <div className="flex items-center justify-between mb-1">
+                                  <h4 className="font-semibold text-sm">
+                                    {question.student?.name || "Anonymous"}
+                                  </h4>
+                                  <span className="text-xs text-gray-400">
+                                    {new Date(
+                                      question.createdAt,
+                                    ).toLocaleDateString()}
+                                  </span>
+                                </div>
+                                <p className="text-sm text-gray-300">
+                                  {question.question}
+                                </p>
+                              </div>
+                            </div>
+
+                            {/* Answers */}
+                            {question.answers &&
+                              question.answers.length > 0 && (
+                                <div className="ml-13 space-y-3 mb-3">
+                                  {question.answers.map((answer, idx) => (
+                                    <div
+                                      key={idx}
+                                      className="flex items-start gap-3 pl-4 border-l-2 border-purple-600"
+                                    >
+                                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-600 to-cyan-600 flex items-center justify-center text-white text-xs font-bold overflow-hidden shrink-0">
+                                        {answer.user?.avatar ? (
+                                          <img
+                                            src={answer.user.avatar}
+                                            alt={answer.user.name}
+                                            className="w-full h-full object-cover"
+                                          />
+                                        ) : (
+                                          answer.user?.name
+                                            ?.charAt(0)
+                                            .toUpperCase() || "U"
+                                        )}
+                                      </div>
+                                      <div className="flex-1">
+                                        <div className="flex items-center justify-between mb-1">
+                                          <h5 className="font-semibold text-xs">
+                                            {answer.user?.name || "Anonymous"}
+                                          </h5>
+                                          <span className="text-xs text-gray-400">
+                                            {new Date(
+                                              answer.createdAt,
+                                            ).toLocaleDateString()}
+                                          </span>
+                                        </div>
+                                        <p className="text-sm text-gray-300">
+                                          {answer.answer}
+                                        </p>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+
+                            {/* Answer Form */}
+                            {answeringQuestionId === question._id ? (
+                              <div className="ml-13 pl-4 border-l-2 border-purple-600">
+                                <textarea
+                                  value={newAnswer}
+                                  onChange={(e) => setNewAnswer(e.target.value)}
+                                  placeholder="Write your answer..."
+                                  className="w-full bg-[#1c1d1f] border border-gray-700 rounded-lg p-2 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-600 resize-none mb-2"
+                                  rows={3}
+                                />
+                                <div className="flex gap-2">
+                                  <button
+                                    onClick={() =>
+                                      handleSubmitAnswer(question._id)
+                                    }
+                                    className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-1 rounded text-xs font-semibold transition-colors"
+                                  >
+                                    Submit Answer
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      setAnsweringQuestionId(null);
+                                      setNewAnswer("");
+                                    }}
+                                    className="bg-gray-700 hover:bg-gray-600 text-white px-4 py-1 rounded text-xs font-semibold transition-colors"
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() =>
+                                  setAnsweringQuestionId(question._id)
+                                }
+                                className="ml-13 text-xs text-purple-400 hover:text-purple-300 transition-colors"
+                              >
+                                Reply
+                              </button>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8">
+                        <FiBookOpen className="text-5xl text-gray-600 mx-auto mb-3" />
+                        <p className="text-gray-400 text-sm">
+                          No questions yet. Be the first to ask!
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -696,6 +1032,22 @@ export default function LearnCourse() {
                 {stats.lectures} lectures • {Math.floor(stats.duration / 60)}h{" "}
                 {stats.duration % 60}m
               </p>
+              {enrollment && (
+                <div className="mt-2">
+                  <div className="flex items-center justify-between text-xs mb-1">
+                    <span className="text-gray-400">Progress</span>
+                    <span className="text-purple-400 font-semibold">
+                      {enrollment.completionPercentage}%
+                    </span>
+                  </div>
+                  <div className="w-full h-2 bg-gray-700 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-purple-600 to-pink-600 transition-all duration-300"
+                      style={{ width: `${enrollment.completionPercentage}%` }}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Sections List */}
@@ -757,7 +1109,7 @@ export default function LearnCourse() {
                                     : "text-gray-500"
                                 }`}
                               >
-                                {lecture.isCompleted ? (
+                                {completedLectures.has(lecture._id) ? (
                                   <FiCheckCircle
                                     size={16}
                                     className="text-green-500"
@@ -814,7 +1166,7 @@ export default function LearnCourse() {
                             : "text-gray-500"
                         }`}
                       >
-                        {lecture.isCompleted ? (
+                        {completedLectures.has(lecture._id) ? (
                           <FiCheckCircle size={16} className="text-green-500" />
                         ) : (
                           <FiPlay size={16} />
