@@ -257,7 +257,7 @@ export default function Courses() {
                 <div
                   key={course._id}
                   className="group bg-linear-to-br from-[#1E1E2E] to-[#2B2B40] rounded-2xl border border-purple-500/20 overflow-hidden shadow-lg hover:shadow-2xl hover:scale-105 transition-all duration-300 cursor-pointer"
-                  onClick={() => router.push(`/course/${course._id}`)}
+                  onClick={() => router.push(`/course/${course._id}/${course.title.toLowerCase().replace(/\s+/g, "-")}`)}
                 >
                   {/* Thumbnail */}
                   <div className="relative h-48 overflow-hidden bg-gray-900">
