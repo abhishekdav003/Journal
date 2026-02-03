@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import Hero from "@/components/Hero";
 import Contact from "@/components/Contact";
+import CourseCard from "@/components/CourseCard";
 import {
   getAllCourses,
   getPlatformStats,
@@ -28,6 +29,8 @@ export default function Home() {
   const router = useRouter();
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [user, setUser] = useState(null);
+  const [purchasedCourses, setPurchasedCourses] = useState([]);
   const [stats, setStats] = useState({
     totalTutors: 0,
     totalCourses: 0,
@@ -37,6 +40,24 @@ export default function Home() {
   const [reviews, setReviews] = useState([]);
 
   useEffect(() => {
+    // Load user from localStorage
+    try {
+      const storedUser = localStorage.getItem("user");
+      const token = localStorage.getItem("token");
+      if (storedUser && token) {
+        const parsed = JSON.parse(storedUser);
+        setUser(parsed?.user || parsed);
+
+        // Load purchased courses from enrollments
+        const enrollments = JSON.parse(
+          localStorage.getItem("enrollments") || "[]",
+        );
+        setPurchasedCourses(enrollments.map((e) => e.courseId || e._id));
+      }
+    } catch (e) {
+      console.error("Failed to load user:", e);
+    }
+
     fetchData();
   }, []);
 
@@ -212,91 +233,38 @@ export default function Home() {
 
           {/* Courses Grid */}
           {loading ? (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="bg-white rounded-3xl p-6 animate-pulse">
-                  <div className="aspect-video bg-gray-200 rounded-2xl mb-4"></div>
-                  <div className="h-6 bg-gray-200 rounded mb-2"></div>
-                  <div className="h-4 bg-gray-200 rounded w-2/3"></div>
+                <div
+                  key={i}
+                  className="animate-pulse border border-gray-800 rounded-lg overflow-hidden bg-[#1E1E2E]"
+                >
+                  <div className="aspect-video bg-gray-800"></div>
+                  <div className="p-4 space-y-3">
+                    <div className="h-5 bg-gray-800 rounded w-3/4"></div>
+                    <div className="h-4 bg-gray-800 rounded w-1/2"></div>
+                    <div className="flex items-center gap-2">
+                      <div className="h-4 bg-gray-800 rounded w-12"></div>
+                      <div className="h-4 bg-gray-800 rounded w-20"></div>
+                    </div>
+                    <div className="h-4 bg-gray-800 rounded w-32"></div>
+                    <div className="flex items-center justify-between pt-2">
+                      <div className="h-6 bg-gray-800 rounded w-16"></div>
+                      <div className="h-9 bg-gray-800 rounded w-28"></div>
+                    </div>
+                  </div>
                 </div>
               ))}
             </div>
           ) : courses.length > 0 ? (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-5">
               {courses.map((course) => (
-                <div
+                <CourseCard
                   key={course._id}
-                  onClick={() => router.push(getCourseUrl(course))}
-                  className="bg-white rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all transform hover:-translate-y-2 cursor-pointer border border-gray-100"
-                >
-                  {/* Course Image */}
-                  <div className="relative aspect-video bg-linear-to-br from-purple-400 to-pink-400">
-                    {course.thumbnail ? (
-                      <img
-                        src={course.thumbnail}
-                        alt={course.title}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <FiBook className="text-white text-6xl opacity-50" />
-                      </div>
-                    )}
-                    <div className="absolute top-4 right-4 bg-yellow-400 text-yellow-900 px-3 py-1 rounded-full text-xs font-bold capitalize">
-                      {course.category || "General"}
-                    </div>
-                  </div>
-
-                  {/* Course Content */}
-                  <div className="p-6 space-y-4">
-                    <h3 className="text-xl font-bold text-gray-900 line-clamp-2 min-h-14">
-                      {course.title}
-                    </h3>
-
-                    <p className="text-gray-600 text-sm line-clamp-3">
-                      {course.description ||
-                        "Learn everything you need to master this subject with expert guidance."}
-                    </p>
-
-                    {/* Stats */}
-                    <div className="flex items-center gap-4 text-sm text-gray-500 pt-2">
-                      <div className="flex items-center gap-1">
-                        <FiStar className="text-yellow-500" />
-                        <span className="font-semibold">4.8</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <FiUsers className="text-purple-500" />
-                        <span>
-                          {course.enrolledStudents?.length || 0} students
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <FiClock className="text-blue-500" />
-                        <span>{course.level || "All levels"}</span>
-                      </div>
-                    </div>
-
-                    {/* Footer */}
-                    <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-                      <div className="flex items-center gap-2">
-                        <div className="w-10 h-10 bg-linear-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white font-bold">
-                          {course.tutor?.name?.charAt(0) || "T"}
-                        </div>
-                        <div>
-                          <p className="text-sm font-bold text-gray-900">
-                            {course.tutor?.name || "Expert Tutor"}
-                          </p>
-                          <p className="text-xs text-gray-500">Instructor</p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-2xl font-bold text-purple-600">
-                          ₹{course.price || 0}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                  course={course}
+                  user={user}
+                  purchasedCourses={purchasedCourses}
+                />
               ))}
             </div>
           ) : (
