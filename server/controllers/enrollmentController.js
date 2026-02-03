@@ -1,5 +1,6 @@
 import Enrollment from "../models/Enrollment.js";
 import Course from "../models/Course.js";
+import Payment from "../models/Payment.js";
 import { AppError } from "../utils/appError.js";
 import { catchAsync } from "../utils/catchAsync.js";
 
@@ -48,6 +49,7 @@ export const createEnrollment = catchAsync(async (req, res, next) => {
     return next(new AppError("Already enrolled in this course", 400));
   }
 
+  // Create enrollment
   const enrollment = await Enrollment.create({
     student: req.user._id,
     course: courseId,
@@ -55,6 +57,20 @@ export const createEnrollment = catchAsync(async (req, res, next) => {
     progress: [], // Empty array initially
     completionPercentage: 0,
   });
+
+  // Create payment record for free courses too (₹0)
+  const payment = await Payment.create({
+    student: req.user._id,
+    course: courseId,
+    tutor: course.tutor,
+    amount: course.price || 0,
+    status: "completed", // Free courses are automatically completed
+    razorpayOrderId: `FREE_${Date.now()}`,
+  });
+
+  // Link payment to enrollment
+  enrollment.payment = payment._id;
+  await enrollment.save();
 
   // Update course enrolled students count
   await Course.findByIdAndUpdate(courseId, {
