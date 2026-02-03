@@ -359,7 +359,7 @@ export default function CourseDetail() {
                 Instructor
               </h2>
               <div className="flex gap-4">
-                <div className="relative w-24 h-24 rounded-full overflow-hidden border-4 border-white shadow-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                <div className="relative w-24 h-24 rounded-full overflow-hidden border-4 border-white shadow-lg bg-linear-to-br from-purple-500 to-pink-500 flex items-center justify-center">
                   {course.tutor?.avatar ? (
                     <img
                       src={course.tutor.avatar}
