@@ -55,7 +55,7 @@ export const getAllCourses = catchAsync(async (req, res) => {
   if (search) query.$text = { $search: search };
 
   const courses = await Course.find(query)
-    .populate("tutor", "name email")
+    .populate("tutor", "name email avatar bio")
     .select("-lectures")
     .sort(sort);
 
