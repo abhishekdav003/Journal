@@ -21,13 +21,14 @@ export default function PaymentTimer({ createdAt }) {
       return { minutes, seconds };
     };
 
-    const timer = setInterval(() => {
+    // Update immediately and then every second
+    const updateTimer = () => {
       const time = calculateTimeLeft();
       setTimeLeft(time);
-    }, 1000);
+    };
 
-    // Initial calculation
-    setTimeLeft(calculateTimeLeft());
+    updateTimer(); // Initial call
+    const timer = setInterval(updateTimer, 1000);
 
     return () => clearInterval(timer);
   }, [createdAt]);
