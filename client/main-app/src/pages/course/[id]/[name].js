@@ -108,8 +108,8 @@ export default function CourseDetail() {
     }
 
     if (course.price && course.price > 0) {
-      // Redirect to payment page
-      router.push(`/student/payments?courseId=${id}`);
+      // Redirect to checkout page for paid courses
+      router.push(`/student/checkout?courseId=${id}`);
       return;
     }
 
