@@ -25,15 +25,9 @@ export default function TutorDashboard() {
     totalStudents: 0,
     totalRevenue: 0,
     recentTransactions: [],
-    monthlyData: [
-      { name: "Jan", revenue: 4000 },
-      { name: "Feb", revenue: 3000 },
-      { name: "Mar", revenue: 5000 },
-      { name: "Apr", revenue: 4500 },
-      { name: "May", revenue: 6000 },
-      { name: "Jun", revenue: 5500 },
-    ]
+    monthlyData: []
   });
+  const [dataLoading, setDataLoading] = useState(true);
 
   // EFFECT 1: Handle Authentication & Redirection
   useEffect(() => {
@@ -51,14 +45,25 @@ export default function TutorDashboard() {
     // Defined INSIDE useEffect to prevent infinite loops / dependency issues
     const fetchStats = async () => {
       try {
+        setDataLoading(true);
         const res = await getDashboardStats();
-        // Use functional state update to merge safely
-        setStats((prev) => ({ ...prev, ...res.data.data }));
+        const data = res.data.data;
+        
+        // Map backend graphData to monthlyData
+        setStats({
+          totalCourses: data.totalCourses || 0,
+          totalStudents: data.totalStudents || 0,
+          totalRevenue: data.totalRevenue || 0,
+          monthlyData: data.graphData || [],
+          recentTransactions: data.recentTransactions || []
+        });
       } catch (err) {
         console.error("Failed to load dashboard stats", err);
         if (err.response && err.response.status === 401) {
           router.push("/auth/tutor?tab=login");
         }
+      } finally {
+        setDataLoading(false);
       }
     };
 
@@ -93,23 +98,19 @@ export default function TutorDashboard() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8 mb-6 sm:mb-8 lg:mb-10">
         <StatCard 
           title="Total Earnings" 
-          value={`₹${stats.totalRevenue?.toLocaleString()}`} 
+          value={dataLoading ? '...' : `₹${stats.totalRevenue?.toLocaleString()}`} 
           icon={FiDollarSign} 
-          trend="up" 
-          trendValue="12%" 
           color="purple" 
         />
         <StatCard 
           title="Active Learners" 
-          value={stats.totalStudents} 
+          value={dataLoading ? '...' : stats.totalStudents} 
           icon={FiUsers} 
-          trend="up" 
-          trendValue="New Students" 
           color="blue" 
         />
         <StatCard 
           title="Live Content" 
-          value={`${stats.totalCourses} Courses`} 
+          value={dataLoading ? '...' : `${stats.totalCourses} Courses`} 
           icon={FiBookOpen} 
           color="orange" 
         />
@@ -127,21 +128,33 @@ export default function TutorDashboard() {
             </select>
           </div>
           <div className="h-64 sm:h-72 w-full overflow-x-auto">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={stats.monthlyData}>
-                <defs>
-                  <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3}/>
-                    <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
-                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#9ca3af', fontSize: 12, fontWeight: 600}} dy={10} />
-                <YAxis hide />
-                <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }} cursor={{ stroke: '#8b5cf6', strokeWidth: 2 }} />
-                <Area type="monotone" dataKey="revenue" stroke="#8b5cf6" strokeWidth={4} fillOpacity={1} fill="url(#colorRev)" />
-              </AreaChart>
-            </ResponsiveContainer>
+            {dataLoading ? (
+              <div className="flex items-center justify-center h-full">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-600"></div>
+              </div>
+            ) : stats.monthlyData?.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={stats.monthlyData}>
+                  <defs>
+                    <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#9ca3af', fontSize: 12, fontWeight: 600}} dy={10} />
+                  <YAxis hide />
+                  <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }} cursor={{ stroke: '#8b5cf6', strokeWidth: 2 }} />
+                  <Area type="monotone" dataKey="revenue" stroke="#8b5cf6" strokeWidth={4} fillOpacity={1} fill="url(#colorRev)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-full text-gray-400">
+                <FiDollarSign size={48} className="mb-4 opacity-50" />
+                <p className="text-sm font-medium">No revenue data available yet</p>
+                <p className="text-xs mt-2">Start selling courses to see analytics</p>
+              </div>
+            )}
           </div>
         </div>
 
@@ -152,7 +165,11 @@ export default function TutorDashboard() {
             <button className="text-purple-600 font-bold text-xs sm:text-sm hover:underline">View All</button>
           </div>
           <div className="space-y-4 sm:space-y-6">
-            {stats.recentTransactions?.length > 0 ? (
+            {dataLoading ? (
+              <div className="flex items-center justify-center py-10">
+                <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-purple-600"></div>
+              </div>
+            ) : stats.recentTransactions?.length > 0 ? (
               stats.recentTransactions.map((tx) => (
                 <div key={tx._id} className="group flex justify-between items-center p-3 sm:p-4 hover:bg-gray-50 rounded-2xl sm:rounded-3xl transition-all cursor-pointer">
                   <div className="flex items-center gap-3 sm:gap-4">
@@ -171,7 +188,9 @@ export default function TutorDashboard() {
               ))
             ) : (
               <div className="text-center py-10">
-                <p className="text-gray-400 text-xs sm:text-sm font-medium italic">No sales recorded yet.</p>
+                <FiDollarSign size={40} className="mx-auto mb-4 text-gray-300" />
+                <p className="text-gray-400 text-xs sm:text-sm font-medium">No sales recorded yet.</p>
+                <p className="text-gray-400 text-[10px] sm:text-xs mt-2">Transactions will appear here</p>
               </div>
             )}
           </div>
