@@ -219,7 +219,7 @@ export default function Payments() {
         {/* --- Payment Summary Cards --- */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {/* Card 1 - Total Spent */}
-          <div className="bg-gradient-to-br from-[#6D28D9] via-[#5B21B6] to-[#4C1D95] p-6 rounded-2xl text-white relative overflow-hidden shadow-2xl hover:shadow-purple-500/20 transition-all duration-300 border border-purple-500/20">
+          <div className="bg-linear-to-br from-[#6D28D9] via-[#5B21B6] to-[#4C1D95] p-6 rounded-2xl text-white relative overflow-hidden shadow-2xl hover:shadow-purple-500/20 transition-all duration-300 border border-purple-500/20">
             <div className="relative z-10">
               <div className="flex items-center gap-2 mb-3">
                 <div className="p-2 bg-white/10 rounded-lg backdrop-blur-sm">
@@ -258,7 +258,7 @@ export default function Payments() {
           </div>
 
           {/* Card 2 - Successful Payments */}
-          <div className="bg-gradient-to-br from-[#10B981] to-[#059669] p-6 rounded-2xl text-white relative overflow-hidden shadow-2xl hover:shadow-green-500/20 transition-all duration-300 border border-green-400/20">
+          <div className="bg-linear-to-br from-[#10B981] to-[#059669] p-6 rounded-2xl text-white relative overflow-hidden shadow-2xl hover:shadow-green-500/20 transition-all duration-300 border border-green-400/20">
             <div className="relative z-10">
               <div className="flex items-center gap-2 mb-3">
                 <div className="p-2 bg-white/10 rounded-lg backdrop-blur-sm">

@@ -552,7 +552,7 @@ export default function LearnCourse() {
                         About the instructor
                       </h3>
                       <div className="flex items-start gap-4">
-                        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center text-white font-bold text-xl overflow-hidden shrink-0">
+                        <div className="w-16 h-16 rounded-full bg-linear-to-br from-purple-600 to-pink-600 flex items-center justify-center text-white font-bold text-xl overflow-hidden shrink-0">
                           {course.tutor.avatar ? (
                             <img
                               src={course.tutor.avatar}
@@ -621,7 +621,7 @@ export default function LearnCourse() {
                           >
                             {/* Question */}
                             <div className="flex items-start gap-3 mb-3">
-                              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center text-white font-bold overflow-hidden shrink-0">
+                              <div className="w-10 h-10 rounded-full bg-linear-to-br from-purple-600 to-pink-600 flex items-center justify-center text-white font-bold overflow-hidden shrink-0">
                                 {question.student?.avatar ? (
                                   <img
                                     src={question.student.avatar}
@@ -660,7 +660,7 @@ export default function LearnCourse() {
                                       key={idx}
                                       className="flex items-start gap-3 pl-4 border-l-2 border-purple-600"
                                     >
-                                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-600 to-cyan-600 flex items-center justify-center text-white text-xs font-bold overflow-hidden shrink-0">
+                                      <div className="w-8 h-8 rounded-full bg-linear-to-br from-blue-600 to-cyan-600 flex items-center justify-center text-white text-xs font-bold overflow-hidden shrink-0">
                                         {answer.user?.avatar ? (
                                           <img
                                             src={answer.user.avatar}
@@ -952,7 +952,7 @@ export default function LearnCourse() {
                             className="p-4 bg-[#2d2f31] rounded-lg"
                           >
                             <div className="flex items-start gap-3">
-                              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center text-white font-bold overflow-hidden shrink-0">
+                              <div className="w-10 h-10 rounded-full bg-linear-to-br from-purple-600 to-pink-600 flex items-center justify-center text-white font-bold overflow-hidden shrink-0">
                                 {review.student?.avatar ? (
                                   <img
                                     src={review.student.avatar}
@@ -1042,7 +1042,7 @@ export default function LearnCourse() {
                   </div>
                   <div className="w-full h-2 bg-gray-700 rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-gradient-to-r from-purple-600 to-pink-600 transition-all duration-300"
+                      className="h-full bg-linear-to-r from-purple-600 to-pink-600 transition-all duration-300"
                       style={{ width: `${enrollment.completionPercentage}%` }}
                     />
                   </div>

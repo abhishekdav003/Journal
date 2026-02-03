@@ -122,7 +122,7 @@ export default function Training() {
         <div className="relative max-w-7xl mx-auto">
           <div className="text-center max-w-4xl mx-auto">
             <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold mb-6">
-              <span className="bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+              <span className="bg-linear-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
                 Professional Training Programs
               </span>
             </h1>
@@ -136,7 +136,7 @@ export default function Training() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <button
                 onClick={() => router.push("/courses")}
-                className="px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold rounded-xl transition-all shadow-lg hover:shadow-xl hover:scale-105 flex items-center justify-center gap-2"
+                className="px-8 py-4 bg-linear-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold rounded-xl transition-all shadow-lg hover:shadow-xl hover:scale-105 flex items-center justify-center gap-2"
               >
                 <FiBriefcase className="w-5 h-5" />
                 Browse Training Programs
@@ -154,17 +154,17 @@ export default function Training() {
 
       {/* Stats Section - Only show if data available */}
       {!loading && stats && (
-        <section className="py-16 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-[#1E1E2E] to-[#0F0F0F]">
+        <section className="py-16 px-4 sm:px-6 lg:px-8 bg-linear-to-b from-[#1E1E2E] to-[#0F0F0F]">
           <div className="max-w-7xl mx-auto">
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
               <div className="text-center p-6 bg-[#0F0F0F]/50 border border-gray-800 rounded-2xl hover:border-blue-500/30 transition-all">
-                <div className="text-4xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent mb-2">
+                <div className="text-4xl font-bold bg-linear-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent mb-2">
                   {stats.totalCourses?.toLocaleString() || 0}
                 </div>
                 <div className="text-gray-400 text-sm">Training Programs</div>
               </div>
               <div className="text-center p-6 bg-[#0F0F0F]/50 border border-gray-800 rounded-2xl hover:border-blue-500/30 transition-all">
-                <div className="text-4xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent mb-2">
+                <div className="text-4xl font-bold bg-linear-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent mb-2">
                   {stats.totalEnrollments?.toLocaleString() || 0}
                 </div>
                 <div className="text-gray-400 text-sm">
@@ -172,13 +172,13 @@ export default function Training() {
                 </div>
               </div>
               <div className="text-center p-6 bg-[#0F0F0F]/50 border border-gray-800 rounded-2xl hover:border-blue-500/30 transition-all">
-                <div className="text-4xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent mb-2">
+                <div className="text-4xl font-bold bg-linear-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent mb-2">
                   {stats.totalTutors?.toLocaleString() || 0}
                 </div>
                 <div className="text-gray-400 text-sm">Expert Instructors</div>
               </div>
               <div className="text-center p-6 bg-[#0F0F0F]/50 border border-gray-800 rounded-2xl hover:border-blue-500/30 transition-all">
-                <div className="text-4xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent mb-2">
+                <div className="text-4xl font-bold bg-linear-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent mb-2">
                   {stats.totalStudents?.toLocaleString() || 0}
                 </div>
                 <div className="text-gray-400 text-sm">Active Learners</div>
@@ -194,7 +194,7 @@ export default function Training() {
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold text-white mb-4">
               Our{" "}
-              <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+              <span className="bg-linear-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
                 Training Programs
               </span>
             </h2>
@@ -208,10 +208,10 @@ export default function Training() {
             {trainingPrograms.map((program, index) => (
               <div
                 key={index}
-                className="group bg-gradient-to-br from-[#1E1E2E] to-[#2B2B40] p-8 rounded-2xl border border-gray-800 hover:border-blue-500/50 transition-all duration-300 hover:scale-105"
+                className="group bg-linear-to-br from-[#1E1E2E] to-[#2B2B40] p-8 rounded-2xl border border-gray-800 hover:border-blue-500/50 transition-all duration-300 hover:scale-105"
               >
                 <div
-                  className={`inline-flex p-4 rounded-xl bg-gradient-to-r ${program.color} mb-6`}
+                  className={`inline-flex p-4 rounded-xl bg-linear-to-r ${program.color} mb-6`}
                 >
                   {program.icon}
                 </div>
@@ -238,12 +238,12 @@ export default function Training() {
       </section>
 
       {/* Features Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-b from-[#1E1E2E] to-[#0F0F0F]">
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-linear-to-b from-[#1E1E2E] to-[#0F0F0F]">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold text-white mb-4">
               What's{" "}
-              <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+              <span className="bg-linear-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
                 Included
               </span>
             </h2>
@@ -258,7 +258,7 @@ export default function Training() {
                 key={index}
                 className="flex items-start gap-4 p-6 bg-[#1E1E2E] rounded-xl border border-gray-800 hover:border-blue-500/30 transition-all"
               >
-                <div className="p-3 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-lg border border-blue-500/20">
+                <div className="p-3 bg-linear-to-r from-blue-500/20 to-purple-500/20 rounded-lg border border-blue-500/20">
                   {feature.icon}
                 </div>
                 <div>
@@ -278,10 +278,10 @@ export default function Training() {
         <div className="max-w-7xl mx-auto">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 to-purple-500/20 rounded-3xl blur-3xl"></div>
-              <div className="relative bg-gradient-to-br from-[#1E1E2E] to-[#2B2B40] p-8 rounded-3xl border border-blue-500/20">
+              <div className="absolute inset-0 bg-linear-to-r from-blue-500/20 to-purple-500/20 rounded-3xl blur-3xl"></div>
+              <div className="relative bg-linear-to-br from-[#1E1E2E] to-[#2B2B40] p-8 rounded-3xl border border-blue-500/20">
                 <div className="text-center mb-8">
-                  <div className="inline-flex p-4 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl mb-4">
+                  <div className="inline-flex p-4 bg-linear-to-r from-blue-600 to-purple-600 rounded-2xl mb-4">
                     <FiBriefcase className="w-12 h-12 text-white" />
                   </div>
                   <h3 className="text-2xl font-bold text-white">
@@ -304,7 +304,7 @@ export default function Training() {
             <div>
               <h2 className="text-4xl font-bold text-white mb-6">
                 Enterprise-Grade{" "}
-                <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+                <span className="bg-linear-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
                   Training Solutions
                 </span>
               </h2>
@@ -315,7 +315,7 @@ export default function Training() {
               </p>
               <div className="space-y-6">
                 <div className="flex gap-4">
-                  <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
+                  <div className="flex-shrink-0 w-12 h-12 bg-linear-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
                     1
                   </div>
                   <div>
@@ -328,7 +328,7 @@ export default function Training() {
                   </div>
                 </div>
                 <div className="flex gap-4">
-                  <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
+                  <div className="flex-shrink-0 w-12 h-12 bg-linear-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
                     2
                   </div>
                   <div>
@@ -341,7 +341,7 @@ export default function Training() {
                   </div>
                 </div>
                 <div className="flex gap-4">
-                  <div className="flex-shrink-0 w-12 h-12 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
+                  <div className="flex-shrink-0 w-12 h-12 bg-linear-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
                     3
                   </div>
                   <div>
@@ -356,7 +356,7 @@ export default function Training() {
               </div>
               <button
                 onClick={() => router.push("/contact")}
-                className="mt-8 px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold rounded-xl transition-all shadow-lg hover:scale-105 inline-flex items-center gap-2"
+                className="mt-8 px-8 py-4 bg-linear-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-bold rounded-xl transition-all shadow-lg hover:scale-105 inline-flex items-center gap-2"
               >
                 <FiBriefcase className="w-5 h-5" />
                 Request Enterprise Demo
@@ -369,7 +369,7 @@ export default function Training() {
       {/* CTA Section */}
       <section className="py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto text-center">
-          <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-12 rounded-3xl relative overflow-hidden">
+          <div className="bg-linear-to-r from-blue-600 to-purple-600 p-12 rounded-3xl relative overflow-hidden">
             <div className="absolute inset-0 bg-black/20"></div>
             <div className="relative z-10">
               <h2 className="text-4xl font-bold text-white mb-4">

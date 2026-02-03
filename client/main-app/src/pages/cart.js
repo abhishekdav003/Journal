@@ -148,7 +148,7 @@ export default function CartPage() {
                     {/* Course Thumbnail */}
                     <div
                       onClick={() => router.push(getCourseUrl(course))}
-                      className="flex-shrink-0 w-32 h-20 bg-linear-to-br from-purple-900/30 to-pink-900/30 rounded-lg overflow-hidden cursor-pointer"
+                      className="shrink-0 w-32 h-20 bg-linear-to-br from-purple-900/30 to-pink-900/30 rounded-lg overflow-hidden cursor-pointer"
                     >
                       {course.thumbnail ? (
                         <img
@@ -239,7 +239,7 @@ export default function CartPage() {
 
                 <div className="mt-6 pt-6 border-t border-gray-700">
                   <div className="flex items-start gap-2 text-gray-400 text-sm">
-                    <FiTag className="mt-0.5 flex-shrink-0" />
+                    <FiTag className="mt-0.5 shrink-0" />
                     <p>30-Day Money-Back Guarantee</p>
                   </div>
                 </div>
