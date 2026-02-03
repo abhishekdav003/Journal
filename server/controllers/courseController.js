@@ -428,7 +428,7 @@ export const getEnrolledCourses = catchAsync(async (req, res) => {
   const enrollments = await Enrollment.find({ student: req.user._id })
     .populate({
       path: "course",
-      populate: { path: "tutor", select: "name email" },
+      populate: { path: "tutor", select: "name email avatar" },
     })
     .sort("-createdAt");
 
