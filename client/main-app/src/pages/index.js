@@ -5,7 +5,11 @@ import Link from "next/link";
 import Image from "next/image";
 import Hero from "@/components/Hero";
 import Contact from "@/components/Contact";
-import { getAllCourses, getPlatformStats, getPublicReviews } from "@/services/apiService";
+import {
+  getAllCourses,
+  getPlatformStats,
+  getPublicReviews,
+} from "@/services/apiService";
 import {
   FiBook,
   FiUsers,
@@ -24,11 +28,11 @@ export default function Home() {
   const router = useRouter();
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({ 
-    totalTutors: 0, 
-    totalCourses: 0, 
+  const [stats, setStats] = useState({
+    totalTutors: 0,
+    totalCourses: 0,
     totalStudents: 0,
-    avgRating: 0 
+    avgRating: 0,
   });
   const [reviews, setReviews] = useState([]);
 
@@ -39,7 +43,7 @@ export default function Home() {
   const fetchData = async () => {
     try {
       setLoading(true);
-      
+
       // Fetch courses
       const coursesResponse = await getAllCourses({ limit: 6 });
       if (coursesResponse.data.success) {
@@ -315,13 +319,18 @@ export default function Home() {
               </span>{" "}
               Say
             </h2>
-            <p className="text-purple-200 text-lg">Real feedback from our learners</p>
+            <p className="text-purple-200 text-lg">
+              Real feedback from our learners
+            </p>
           </div>
 
           {loading ? (
             <div className="grid md:grid-cols-3 gap-8">
               {[1, 2, 3].map((i) => (
-                <div key={i} className="bg-white/10 backdrop-blur-lg rounded-3xl p-8 border border-white/20 animate-pulse">
+                <div
+                  key={i}
+                  className="bg-white/10 backdrop-blur-lg rounded-3xl p-8 border border-white/20 animate-pulse"
+                >
                   <div className="h-20 bg-white/20 rounded mb-4"></div>
                   <div className="h-4 bg-white/20 rounded mb-2"></div>
                   <div className="h-4 bg-white/20 rounded w-3/4"></div>
@@ -337,9 +346,9 @@ export default function Home() {
                 >
                   <div className="flex items-center gap-4 mb-6">
                     {review.student?.avatar ? (
-                      <img 
-                        src={review.student.avatar} 
-                        alt={review.student.name} 
+                      <img
+                        src={review.student.avatar}
+                        alt={review.student.name}
                         className="w-16 h-16 rounded-full object-cover ring-2 ring-purple-400"
                       />
                     ) : (
@@ -356,8 +365,8 @@ export default function Home() {
                           <FiStar
                             key={i}
                             className={`text-sm ${
-                              i < review.rating 
-                                ? "text-yellow-400 fill-current" 
+                              i < review.rating
+                                ? "text-yellow-400 fill-current"
                                 : "text-gray-400"
                             }`}
                           />
@@ -376,7 +385,9 @@ export default function Home() {
             </div>
           ) : (
             <div className="text-center py-12">
-              <p className="text-purple-200 text-lg">No reviews yet. Be the first to share your experience!</p>
+              <p className="text-purple-200 text-lg">
+                No reviews yet. Be the first to share your experience!
+              </p>
             </div>
           )}
         </div>
