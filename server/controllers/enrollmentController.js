@@ -1,12 +1,22 @@
 import Enrollment from "../models/Enrollment.js";
 import Course from "../models/Course.js";
+import Payment from "../models/Payment.js";
 import { AppError } from "../utils/appError.js";
 import { catchAsync } from "../utils/catchAsync.js";
 
 // @desc    Check if user is enrolled in a course
 // @route   GET /api/enrollments/check/:courseId
-// @access  Private
+// @access  Public (but requires token if user wants to check enrollment)
 export const checkEnrollment = catchAsync(async (req, res, next) => {
+  // If no user (not authenticated), return not enrolled
+  if (!req.user) {
+    return res.status(200).json({
+      success: true,
+      enrolled: false,
+      data: null,
+    });
+  }
+
   const enrollment = await Enrollment.findOne({
     student: req.user._id,
     course: req.params.courseId,
@@ -39,21 +49,37 @@ export const createEnrollment = catchAsync(async (req, res, next) => {
     return next(new AppError("Already enrolled in this course", 400));
   }
 
+  // Create enrollment
   const enrollment = await Enrollment.create({
     student: req.user._id,
     course: courseId,
     enrolledAt: Date.now(),
-    progress: {
-      completedLectures: [],
-      lastActiveAt: Date.now(),
-    },
+    progress: [], // Empty array initially
+    completionPercentage: 0,
   });
 
-  // Optionally update course student count
-  // await Course.findByIdAndUpdate(courseId, { $inc: { enrolledStudents: 1 } });
+  // Create payment record for free courses too (₹0)
+  const payment = await Payment.create({
+    student: req.user._id,
+    course: courseId,
+    tutor: course.tutor,
+    amount: course.price || 0,
+    status: "completed", // Free courses are automatically completed
+    razorpayOrderId: `FREE_${Date.now()}`,
+  });
+
+  // Link payment to enrollment
+  enrollment.payment = payment._id;
+  await enrollment.save();
+
+  // Update course enrolled students count
+  await Course.findByIdAndUpdate(courseId, {
+    $addToSet: { enrolledStudents: req.user._id },
+  });
 
   res.status(201).json({
     success: true,
+    message: "Successfully enrolled in the course",
     data: { enrollment },
   });
 });

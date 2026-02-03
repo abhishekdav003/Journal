@@ -15,12 +15,16 @@ import reviewRoutes from "./routes/reviewRoutes.js";
 import statsRoutes from "./routes/statsRoutes.js";
 import { errorHandler, notFound } from "./middleware/errorHandler.js";
 import { logger } from "./utils/logger.js";
+import { startPaymentCleanup } from "./scripts/cleanupExpiredPayments.js";
 
 // Load environment variables
 dotenv.config();
 
 // Connect to database
 connectDB();
+
+// Start payment cleanup scheduler
+startPaymentCleanup();
 
 // Initialize Express app
 const app = express();

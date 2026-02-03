@@ -15,13 +15,13 @@ const enrollmentSchema = new mongoose.Schema(
     payment: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Payment",
-      required: true,
+      required: false, // Optional - only for paid courses
     },
     progress: [
       {
         lecture: {
           type: mongoose.Schema.Types.ObjectId,
-          required: true,
+          required: false, // Optional - progress tracking
         },
         completed: {
           type: Boolean,
@@ -31,8 +31,8 @@ const enrollmentSchema = new mongoose.Schema(
       },
     ],
     // completedLectures: [
-    //   { 
-    //     type: mongoose.Schema.Types.ObjectId 
+    //   {
+    //     type: mongoose.Schema.Types.ObjectId
     //   }
     // ],
     completionPercentage: {
@@ -41,9 +41,9 @@ const enrollmentSchema = new mongoose.Schema(
       min: 0,
       max: 100,
     },
-    enrolledAt: { 
+    enrolledAt: {
       type: Date,
-      default: Date.now
+      default: Date.now,
     },
     certificateIssued: {
       type: Boolean,
