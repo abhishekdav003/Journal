@@ -78,3 +78,7 @@ export const getTutorLearners = () => API.get("/enrollments/tutor/my-students");
 export const getTutorReviews = () => API.get("/reviews/tutor");
 export const replyToReview = (id, data) =>
   API.patch(`/reviews/${id}/reply`, data);
+
+// Public Stats (no auth required)
+export const getPlatformStats = () => API.get("/stats/platform");
+export const getPublicReviews = (limit = 6) => API.get(`/stats/reviews?limit=${limit}`);

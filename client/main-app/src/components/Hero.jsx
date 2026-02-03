@@ -1,4 +1,6 @@
 import { useRouter } from "next/router";
+import { useState, useEffect } from "react";
+import { getPlatformStats } from "@/services/apiService";
 import {
   FiArrowRight,
   FiPlayCircle,
@@ -9,6 +11,25 @@ import {
 
 export default function Hero() {
   const router = useRouter();
+  const [stats, setStats] = useState({
+    totalTutors: 0,
+    totalCourses: 0,
+  });
+
+  useEffect(() => {
+    fetchStats();
+  }, []);
+
+  const fetchStats = async () => {
+    try {
+      const response = await getPlatformStats();
+      if (response.data.success) {
+        setStats(response.data.data);
+      }
+    } catch (error) {
+      // Silently fail, will show 0 by default
+    }
+  };
 
   return (
     <section className="relative bg-linear-to-br from-purple-900 via-purple-800 to-indigo-900 min-h-[90vh] flex items-center overflow-hidden">
@@ -49,12 +70,16 @@ export default function Hero() {
             {/* Stats */}
             <div className="flex gap-12 pt-6">
               <div>
-                <h3 className="text-4xl font-bold text-white">100+</h3>
+                <h3 className="text-4xl font-bold text-white">
+                  {stats.totalTutors > 0 ? `${stats.totalTutors}+` : "Loading..."}
+                </h3>
                 <p className="text-purple-200 mt-1">Tutors</p>
               </div>
               <div className="w-px bg-purple-400/30"></div>
               <div>
-                <h3 className="text-4xl font-bold text-white">50+</h3>
+                <h3 className="text-4xl font-bold text-white">
+                  {stats.totalCourses > 0 ? `${stats.totalCourses}+` : "Loading..."}
+                </h3>
                 <p className="text-purple-200 mt-1">Online Courses</p>
               </div>
             </div>

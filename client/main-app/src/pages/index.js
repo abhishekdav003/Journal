@@ -5,7 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import Hero from "@/components/Hero";
 import Contact from "@/components/Contact";
-import { getAllCourses } from "@/services/apiService";
+import { getAllCourses, getPlatformStats, getPublicReviews } from "@/services/apiService";
 import {
   FiBook,
   FiUsers,
@@ -24,22 +24,41 @@ export default function Home() {
   const router = useRouter();
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({ tutors: 100, courses: 50 });
+  const [stats, setStats] = useState({ 
+    totalTutors: 0, 
+    totalCourses: 0, 
+    totalStudents: 0,
+    avgRating: 0 
+  });
+  const [reviews, setReviews] = useState([]);
 
   useEffect(() => {
-    fetchCourses();
+    fetchData();
   }, []);
 
-  const fetchCourses = async () => {
+  const fetchData = async () => {
     try {
       setLoading(true);
-      const response = await getAllCourses({ limit: 6 });
-      if (response.data.success) {
-        setCourses(response.data.data.courses || []);
-        setStats((prev) => ({ ...prev, courses: response.data.count || 50 }));
+      
+      // Fetch courses
+      const coursesResponse = await getAllCourses({ limit: 6 });
+      if (coursesResponse.data.success) {
+        setCourses(coursesResponse.data.data.courses || []);
+      }
+
+      // Fetch platform statistics
+      const statsResponse = await getPlatformStats();
+      if (statsResponse.data.success) {
+        setStats(statsResponse.data.data);
+      }
+
+      // Fetch public reviews
+      const reviewsResponse = await getPublicReviews(3);
+      if (reviewsResponse.data.success) {
+        setReviews(reviewsResponse.data.data.reviews || []);
       }
     } catch (error) {
-      console.error("Failed to fetch courses:", error);
+      console.error("Failed to fetch data:", error);
     } finally {
       setLoading(false);
     }
@@ -296,37 +315,70 @@ export default function Home() {
               </span>{" "}
               Say
             </h2>
-            <p className="text-purple-200 text-lg">About us</p>
+            <p className="text-purple-200 text-lg">Real feedback from our learners</p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8">
-            {[1, 2, 3].map((i) => (
-              <div
-                key={i}
-                className="bg-white/10 backdrop-blur-lg rounded-3xl p-8 border border-white/20 hover:bg-white/20 transition-all"
-              >
-                <div className="flex items-center gap-4 mb-6">
-                  <div className="w-16 h-16 bg-linear-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white font-bold text-xl">
-                    T{i}
-                  </div>
-                  <div>
-                    <h4 className="font-bold text-white text-lg">Tutor Name</h4>
-                    <div className="flex gap-1">
-                      {[1, 2, 3, 4, 5].map((star) => (
-                        <FiStar
-                          key={star}
-                          className="text-yellow-400 fill-current text-sm"
-                        />
-                      ))}
+          {loading ? (
+            <div className="grid md:grid-cols-3 gap-8">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="bg-white/10 backdrop-blur-lg rounded-3xl p-8 border border-white/20 animate-pulse">
+                  <div className="h-20 bg-white/20 rounded mb-4"></div>
+                  <div className="h-4 bg-white/20 rounded mb-2"></div>
+                  <div className="h-4 bg-white/20 rounded w-3/4"></div>
+                </div>
+              ))}
+            </div>
+          ) : reviews.length > 0 ? (
+            <div className="grid md:grid-cols-3 gap-8">
+              {reviews.map((review) => (
+                <div
+                  key={review._id}
+                  className="bg-white/10 backdrop-blur-lg rounded-3xl p-8 border border-white/20 hover:bg-white/20 transition-all"
+                >
+                  <div className="flex items-center gap-4 mb-6">
+                    {review.student?.avatar ? (
+                      <img 
+                        src={review.student.avatar} 
+                        alt={review.student.name} 
+                        className="w-16 h-16 rounded-full object-cover ring-2 ring-purple-400"
+                      />
+                    ) : (
+                      <div className="w-16 h-16 bg-linear-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center text-white font-bold text-xl">
+                        {review.student?.name?.charAt(0) || "S"}
+                      </div>
+                    )}
+                    <div>
+                      <h4 className="font-bold text-white text-lg">
+                        {review.student?.name || "Student"}
+                      </h4>
+                      <div className="flex gap-1">
+                        {[...Array(5)].map((_, i) => (
+                          <FiStar
+                            key={i}
+                            className={`text-sm ${
+                              i < review.rating 
+                                ? "text-yellow-400 fill-current" 
+                                : "text-gray-400"
+                            }`}
+                          />
+                        ))}
+                      </div>
                     </div>
                   </div>
+                  <p className="text-purple-100 leading-relaxed mb-2 line-clamp-3">
+                    {review.comment}
+                  </p>
+                  <p className="text-purple-300 text-sm font-semibold">
+                    Course: {review.course?.title}
+                  </p>
                 </div>
-                <p className="text-purple-100 leading-relaxed">
-                  {"Review of Tutor - Amazing experience learning with this platform. The courses are well structured and easy to follow."}
-                </p>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-12">
+              <p className="text-purple-200 text-lg">No reviews yet. Be the first to share your experience!</p>
+            </div>
+          )}
         </div>
       </section>
 

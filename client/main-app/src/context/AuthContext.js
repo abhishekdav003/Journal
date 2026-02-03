@@ -46,9 +46,6 @@ export function AuthProvider({ children }) {
             const status = err?.response?.status;
             if (status === 401) {
               // Token expired or invalid - redirect to login
-              console.warn(
-                "Session expired or invalid token (401). Redirecting to login.",
-              );
               // Clear stored auth state
               localStorage.removeItem("token");
               localStorage.removeItem("user");
@@ -58,7 +55,6 @@ export function AuthProvider({ children }) {
                 window.location.href = "/auth/student?tab=login";
               }
             } else {
-              console.error("Failed to refresh user from API:", err);
               // Clear stored auth state on any failure to keep UI consistent
               localStorage.removeItem("token");
               localStorage.removeItem("user");
@@ -67,7 +63,6 @@ export function AuthProvider({ children }) {
           }
         }
       } catch (err) {
-        console.error("Auth init error:", err);
         localStorage.removeItem("token");
         localStorage.removeItem("user");
         if (mounted) setUser(null);
@@ -110,7 +105,7 @@ export function AuthProvider({ children }) {
         setUser(fetched);
       }
     } catch (err) {
-      console.error("Failed to refresh user:", err);
+      // Silently fail
     }
   };
 

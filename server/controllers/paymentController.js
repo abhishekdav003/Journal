@@ -5,6 +5,7 @@ import Payment from "../models/Payment.js";
 import Enrollment from "../models/Enrollment.js";
 import { AppError } from "../utils/appError.js";
 import { catchAsync } from "../utils/catchAsync.js";
+import { logger } from "../utils/logger.js";
 
 // Initialize Razorpay (guarded)
 let razorpay;
@@ -15,11 +16,11 @@ if (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) {
       key_secret: process.env.RAZORPAY_KEY_SECRET,
     });
   } catch (err) {
-    console.error("Razorpay initialization error:", err.message);
+    logger.error("Razorpay initialization error:", err);
     razorpay = null;
   }
 } else {
-  console.warn(
+  logger.warn(
     "Razorpay keys missing. Set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET to enable payments.",
   );
 }

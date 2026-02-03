@@ -2,6 +2,7 @@ import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 import { AppError } from "../utils/appError.js";
 import { catchAsync } from "../utils/catchAsync.js";
+import { logger } from "../utils/logger.js";
 
 // Protect routes - verify JWT token
 export const protect = catchAsync(async (req, res, next) => {
@@ -66,7 +67,7 @@ export const optionalAuth = catchAsync(async (req, res, next) => {
     }
   } catch (error) {
     // Invalid token - just continue without user
-    console.log("Optional auth: Invalid token, continuing without user");
+    logger.debug("Optional auth: Invalid token, continuing without user");
   }
 
   next();

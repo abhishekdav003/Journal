@@ -40,7 +40,7 @@ export default function Header() {
           }
         }
       } catch (e) {
-        console.error("Failed to parse user from storage", e);
+        // Silently fail
       }
     };
 
