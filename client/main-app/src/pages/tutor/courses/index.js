@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
-import { getTutorCourses, togglePublishCourse } from '../../../services/apiService';
+import { getTutorCourses, togglePublishCourse, deleteCourse, updateCourse } from '../../../services/apiService';
 import TutorLayout from '../../../components/tutor/TutorLayout';
 // IMPORT COURSE CARD
 import CourseCard from '../../../components/tutor/CourseCard'; 
-import { FiPlus, FiBook, FiSearch } from 'react-icons/fi';
+import { FiPlus, FiBook, FiSearch, FiX } from 'react-icons/fi';
 import toast, { Toaster } from 'react-hot-toast';
 
 export default function MyCourses() {
@@ -13,6 +13,10 @@ export default function MyCourses() {
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingCourse, setEditingCourse] = useState(null);
+  const [newTitle, setNewTitle] = useState('');
+  const [updating, setUpdating] = useState(false);
 
   useEffect(() => {
     fetchCourses();
@@ -40,6 +44,57 @@ export default function MyCourses() {
       toast.success(currentStatus ? "Course unpublished" : "Course is now Live!");
     } catch (err) {
       toast.error("Failed to update status");
+    }
+  };
+
+  const handleDeleteCourse = async (courseId) => {
+    const deletePromise = deleteCourse(courseId);
+    
+    toast.promise(deletePromise, {
+      loading: 'Deleting course and media from Cloudinary...',
+      success: 'Course deleted successfully!',
+      error: (err) => err.response?.data?.message || 'Failed to delete course'
+    });
+
+    try {
+      await deletePromise;
+      setCourses(courses.filter(course => course._id !== courseId));
+    } catch (error) {
+      // Error already handled by toast.promise
+    }
+  };
+
+  const handleQuickEdit = (course) => {
+    setEditingCourse(course);
+    setNewTitle(course.title);
+    setShowEditModal(true);
+  };
+
+  const handleSaveTitle = async () => {
+    if (!newTitle.trim()) {
+      toast.error('Title cannot be empty');
+      return;
+    }
+
+    if (newTitle === editingCourse.title) {
+      setShowEditModal(false);
+      return;
+    }
+
+    setUpdating(true);
+    try {
+      await updateCourse(editingCourse._id, { title: newTitle });
+      setCourses(courses.map(course => 
+        course._id === editingCourse._id 
+          ? { ...course, title: newTitle } 
+          : course
+      ));
+      toast.success('Course title updated successfully!');
+      setShowEditModal(false);
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to update title');
+    } finally {
+      setUpdating(false);
     }
   };
 
@@ -95,7 +150,9 @@ export default function MyCourses() {
             <CourseCard 
               key={course._id} 
               course={course} 
-              onTogglePublish={handleTogglePublish} 
+              onTogglePublish={handleTogglePublish}
+              onDelete={handleDeleteCourse}
+              onQuickEdit={handleQuickEdit}
             />
           ))}
         </div>
@@ -118,6 +175,67 @@ export default function MyCourses() {
               Create Your First Course
             </button>
           </Link>
+        </div>
+      )}
+
+      {/* Quick Edit Title Modal */}
+      {showEditModal && editingCourse && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowEditModal(false)}>
+          <div className="bg-white rounded-2xl p-6 max-w-lg w-full shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-2xl font-bold text-gray-900">Edit Course Title</h3>
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <FiX size={20} />
+              </button>
+            </div>
+            
+            <div className="mb-6">
+              <label className="block text-sm font-bold text-gray-700 mb-2">Course Title</label>
+              <input
+                type="text"
+                value={newTitle}
+                onChange={(e) => setNewTitle(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none transition text-gray-900"
+                placeholder="Enter course title"
+                autoFocus
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter' && !updating) {
+                    handleSaveTitle();
+                  }
+                }}
+              />
+              <p className="text-xs text-gray-500 mt-2">
+                Original: <span className="font-semibold">{editingCourse.title}</span>
+              </p>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowEditModal(false)}
+                disabled={updating}
+                className="flex-1 px-4 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 transition-colors disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveTitle}
+                disabled={updating || !newTitle.trim()}
+                className="flex-1 px-4 py-3 bg-purple-600 text-white rounded-xl font-bold hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              >
+                {updating ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    Saving...
+                  </>
+                ) : (
+                  'Save Changes'
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </TutorLayout>

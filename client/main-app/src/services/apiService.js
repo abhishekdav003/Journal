@@ -45,6 +45,7 @@ export const getAllCourses = (params) => API.get("/courses", { params });
 export const createCourse = (data) => API.post("/courses", data);
 export const getCourse = (id) => API.get(`/courses/${id}`);
 export const updateCourse = (id, data) => API.put(`/courses/${id}`, data);
+export const deleteCourse = (id) => API.delete(`/courses/${id}`);
 export const addModule = (id, data) => API.post(`/courses/${id}/modules`, data);
 export const updateModule = (id, moduleId, data) =>
   API.put(`/courses/${id}/modules/${moduleId}`, data);
