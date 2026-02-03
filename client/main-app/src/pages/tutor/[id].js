@@ -3,7 +3,14 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import axios from "axios";
 import Head from "next/head";
-import { FaStar, FaArrowRight, FaGraduationCap, FaBook } from "react-icons/fa";
+import {
+  FaStar,
+  FaArrowRight,
+  FaGraduationCap,
+  FaBook,
+  FaClock,
+  FaPlayCircle,
+} from "react-icons/fa";
 
 export default function TutorProfile() {
   const router = useRouter();
@@ -224,12 +231,28 @@ export default function TutorProfile() {
                         {course.description}
                       </p>
 
+                      {/* Duration and Lectures */}
+                      <div className="flex items-center gap-4 mb-4 text-sm text-gray-300">
+                        <div className="flex items-center gap-1.5">
+                          <FaPlayCircle className="text-purple-400" />
+                          <span>{course.lectureCount || 0} lectures</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <FaClock className="text-purple-400" />
+                          <span>
+                            {course.totalDuration
+                              ? `${Math.floor(course.totalDuration / 3600)}h ${Math.floor((course.totalDuration % 3600) / 60)}m`
+                              : "0h 0m"}
+                          </span>
+                        </div>
+                      </div>
+
                       {/* Stats */}
                       <div className="flex items-center justify-between mb-4 text-sm text-gray-300">
                         <span className="bg-purple-900/50 px-3 py-1 rounded-full">
                           {course.level || "All Levels"}
                         </span>
-                        {course.rating && (
+                        {course.rating > 0 && (
                           <div className="flex items-center gap-1">
                             <FaStar className="text-yellow-400" />
                             <span>{course.rating.toFixed(1)}</span>
