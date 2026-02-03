@@ -3,7 +3,14 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import axios from "axios";
 import Head from "next/head";
-import { FaStar, FaArrowRight, FaGraduationCap, FaBook } from "react-icons/fa";
+import {
+  FaStar,
+  FaArrowRight,
+  FaGraduationCap,
+  FaBook,
+  FaClock,
+  FaPlayCircle,
+} from "react-icons/fa";
 
 export default function TutorProfile() {
   const router = useRouter();
@@ -35,6 +42,44 @@ export default function TutorProfile() {
 
     fetchTutorProfile();
   }, [id]);
+
+  // Calculate total students across all courses
+  const getTotalStudents = () => {
+    return courses.reduce((sum, course) => {
+      const studentCount = Array.isArray(course.enrolledStudents)
+        ? course.enrolledStudents.length
+        : 0;
+      return sum + studentCount;
+    }, 0);
+  };
+
+  // Calculate average rating (only count courses with rating > 0)
+  const getAverageRating = () => {
+    const ratedCourses = courses.filter((course) => course.rating > 0);
+    if (ratedCourses.length === 0) return null;
+
+    const totalRating = ratedCourses.reduce(
+      (sum, course) => sum + course.rating,
+      0,
+    );
+    return (totalRating / ratedCourses.length).toFixed(1);
+  };
+
+  // Format duration in hours, minutes, seconds
+  const formatDuration = (seconds) => {
+    if (!seconds) return "0h 0m 0s";
+
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = Math.floor(seconds % 60);
+
+    const parts = [];
+    if (hours > 0) parts.push(`${hours}h`);
+    if (minutes > 0) parts.push(`${minutes}m`);
+    if (secs > 0 || parts.length === 0) parts.push(`${secs}s`);
+
+    return parts.join(" ");
+  };
 
   if (loading) {
     return (
@@ -135,11 +180,7 @@ export default function TutorProfile() {
                       <div>
                         <p className="text-gray-400 text-sm">Total Students</p>
                         <p className="text-white text-xl font-bold">
-                          {courses.reduce(
-                            (sum, course) =>
-                              sum + (course.enrolledStudents || 0),
-                            0,
-                          )}
+                          {getTotalStudents()}
                         </p>
                       </div>
                     </div>
@@ -148,14 +189,7 @@ export default function TutorProfile() {
                       <div>
                         <p className="text-gray-400 text-sm">Avg Rating</p>
                         <p className="text-white text-xl font-bold">
-                          {courses.length > 0
-                            ? (
-                                courses.reduce(
-                                  (sum, course) => sum + (course.rating || 0),
-                                  0,
-                                ) / courses.length
-                              ).toFixed(1)
-                            : "N/A"}
+                          {getAverageRating() || "New"}
                         </p>
                       </div>
                     </div>
@@ -213,12 +247,24 @@ export default function TutorProfile() {
                         {course.description}
                       </p>
 
+                      {/* Duration and Lectures */}
+                      <div className="flex items-center gap-4 mb-4 text-sm text-gray-300">
+                        <div className="flex items-center gap-1.5">
+                          <FaPlayCircle className="text-purple-400" />
+                          <span>{course.lectureCount || 0} lectures</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <FaClock className="text-purple-400" />
+                          <span>{formatDuration(course.totalDuration)}</span>
+                        </div>
+                      </div>
+
                       {/* Stats */}
                       <div className="flex items-center justify-between mb-4 text-sm text-gray-300">
                         <span className="bg-purple-900/50 px-3 py-1 rounded-full">
                           {course.level || "All Levels"}
                         </span>
-                        {course.rating && (
+                        {course.rating > 0 && (
                           <div className="flex items-center gap-1">
                             <FaStar className="text-yellow-400" />
                             <span>{course.rating.toFixed(1)}</span>
@@ -258,7 +304,9 @@ export default function TutorProfile() {
               <div className="text-center py-16">
                 <FaBook className="text-6xl text-purple-400/30 mx-auto mb-4" />
                 <p className="text-gray-400 text-xl">
-                  {"This tutor hasn't published any courses yet. Please check back later."}
+                  {
+                    "This tutor hasn't published any courses yet. Please check back later."
+                  }
                 </p>
               </div>
             )}

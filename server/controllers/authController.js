@@ -140,11 +140,11 @@ export const forgotPassword = catchAsync(async (req, res, next) => {
   // TODO: Implement email service to send reset link
   // For now, return the reset token in response (DEVELOPMENT ONLY)
   // In production, this should only send email and return success message
-  
+
   res.status(200).json({
     success: true,
     message: "Password reset link sent to email",
-    ...(process.env.NODE_ENV === "development" && { resetToken }) // Only in dev
+    ...(process.env.NODE_ENV === "development" && { resetToken }), // Only in dev
   });
 });
 
@@ -214,10 +214,7 @@ export const uploadAvatar = catchAsync(async (req, res, next) => {
     try {
       await deleteFromCloudinary(user.avatarPublicId, "image");
     } catch (err) {
-      logger.error(
-        "Failed to delete previous avatar from Cloudinary:",
-        err
-      );
+      logger.error("Failed to delete previous avatar from Cloudinary:", err);
       // continue without failing the request
     }
   }
@@ -303,16 +300,67 @@ export const getTutorProfile = catchAsync(async (req, res, next) => {
     isPublished: true,
   })
     .select(
-      "_id title description thumbnail price originalPrice level rating totalRatings enrolledStudents",
+      "_id title description thumbnail price originalPrice level rating numReviews enrolledStudents sections modules lectures totalDuration",
     )
     .lean();
+
+  // Calculate lecture count and total duration for each course
+  const coursesWithStats = courses.map((course) => {
+    let lectureCount = 0;
+    let totalDuration = 0;
+
+    // Count lectures from sections/modules
+    if (course.sections && Array.isArray(course.sections)) {
+      course.sections.forEach((section) => {
+        if (section.lectures && Array.isArray(section.lectures)) {
+          lectureCount += section.lectures.length;
+          section.lectures.forEach((lecture) => {
+            totalDuration += lecture.duration || 0;
+          });
+        }
+      });
+    }
+
+    // Fallback to modules if sections not present
+    if (lectureCount === 0 && course.modules && Array.isArray(course.modules)) {
+      course.modules.forEach((module) => {
+        if (module.lectures && Array.isArray(module.lectures)) {
+          lectureCount += module.lectures.length;
+          module.lectures.forEach((lecture) => {
+            totalDuration += lecture.duration || 0;
+          });
+        }
+      });
+    }
+
+    // Fallback to direct lectures array
+    if (
+      lectureCount === 0 &&
+      course.lectures &&
+      Array.isArray(course.lectures)
+    ) {
+      lectureCount = course.lectures.length;
+      course.lectures.forEach((lecture) => {
+        totalDuration += lecture.duration || 0;
+      });
+    }
+
+    // Remove sections/modules/lectures from response to keep it clean
+    const { sections, modules, lectures, ...courseData } = course;
+
+    return {
+      ...courseData,
+      lectureCount,
+      totalDuration,
+    };
+  });
 
   res.status(200).json({
     success: true,
     data: {
       user: {
         ...user,
-        courses: courses || [],
+        courses: coursesWithStats || [],
       },
     },
   });

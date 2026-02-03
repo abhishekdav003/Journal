@@ -257,7 +257,7 @@ export default function Courses() {
                 <div
                   key={course._id}
                   className="group bg-linear-to-br from-[#1E1E2E] to-[#2B2B40] rounded-2xl border border-purple-500/20 overflow-hidden shadow-lg hover:shadow-2xl hover:scale-105 transition-all duration-300 cursor-pointer"
-                  onClick={() => router.push(`/course/${course._id}`)}
+                  onClick={() => router.push(`/course/${course._id}/${course.title.toLowerCase().replace(/\s+/g, "-")}`)}
                 >
                   {/* Thumbnail */}
                   <div className="relative h-48 overflow-hidden bg-gray-900">
@@ -349,7 +349,10 @@ export default function Courses() {
                       className="w-full bg-linear-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white py-3 rounded-xl font-bold transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2 group"
                       onClick={(e) => {
                         e.stopPropagation();
-                        router.push(`/course/${course._id}`);
+                        const courseName = course.title
+                          .toLowerCase()
+                          .replace(/\s+/g, "-");
+                        router.push(`/learn/${course._id}/${courseName}`);
                       }}
                     >
                       <FiPlayCircle size={18} />

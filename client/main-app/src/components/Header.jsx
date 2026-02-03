@@ -21,6 +21,7 @@ export default function Header() {
   const [storageUser, setStorageUser] = useState(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [cartCount, setCartCount] = useState(0);
   const dropdownRef = useRef(null);
   const searchRef = useRef(null);
 
@@ -50,6 +51,29 @@ export default function Header() {
     return () => {
       window.removeEventListener("auth-update", handleAuthUpdate);
       window.removeEventListener("storage", handleAuthUpdate);
+    };
+  }, []);
+
+  // Load cart count
+  useEffect(() => {
+    const updateCartCount = () => {
+      try {
+        const cart = JSON.parse(localStorage.getItem("cart") || "[]");
+        setCartCount(cart.length);
+      } catch (e) {
+        setCartCount(0);
+      }
+    };
+
+    updateCartCount();
+
+    // Listen for cart updates
+    window.addEventListener("storage", updateCartCount);
+    window.addEventListener("cart-update", updateCartCount);
+
+    return () => {
+      window.removeEventListener("storage", updateCartCount);
+      window.removeEventListener("cart-update", updateCartCount);
     };
   }, []);
 
@@ -158,6 +182,22 @@ export default function Header() {
 
         {/* --- RIGHT: AUTH BUTTONS & HAMBURGER --- */}
         <div className="flex items-center gap-2 md:gap-4">
+          {/* Cart Icon - Only show when logged in */}
+          {currentUser && (
+            <button
+              onClick={() => router.push("/cart")}
+              className="relative text-gray-300 hover:text-white transition-all p-2 hover:bg-[#2B2B40] rounded-full"
+              title="Shopping Cart"
+            >
+              <FiShoppingCart size={20} />
+              {cartCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-linear-to-r from-purple-600 to-pink-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                  {cartCount > 9 ? "9+" : cartCount}
+                </span>
+              )}
+            </button>
+          )}
+
           {/* Mobile Search Icon */}
           <button
             onClick={() => setSearchOpen(!searchOpen)}

@@ -1,12 +1,28 @@
 import { useEffect } from "react";
 import { useRouter } from "next/router";
-import AuthSlider from "@/components/auth/authSlider"; 
+import AuthSlider from "@/components/auth/authSlider";
 
 export default function AuthPage() {
   const router = useRouter();
   const { role, tab = "login" } = router.query;
 
+  // Redirect if already logged in
   useEffect(() => {
+    const token = localStorage.getItem("token");
+    const user = localStorage.getItem("user");
+
+    if (token && user) {
+      const userData = JSON.parse(user);
+      // Redirect to appropriate dashboard based on role
+      if (userData.role === "student") {
+        router.replace("/student/courses");
+      } else if (userData.role === "tutor") {
+        router.replace("/tutor/dashboard");
+      }
+      return;
+    }
+
+    // Validate role parameter
     if (role && role !== "student" && role !== "tutor") {
       router.push("/");
     }

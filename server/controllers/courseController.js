@@ -100,6 +100,7 @@ export const getCourse = catchAsync(async (req, res, next) => {
     !isEnrolled &&
     (!req.user || req.user._id.toString() !== course.tutor._id.toString())
   ) {
+    // Hide non-preview videos from direct lectures array
     course.lectures = course.lectures.map((lecture) => {
       if (!lecture.isPreview) {
         lecture.videoUrl = null;
@@ -108,6 +109,7 @@ export const getCourse = catchAsync(async (req, res, next) => {
       return lecture;
     });
 
+    // Hide non-preview videos from modules (if exists)
     if (course.modules?.length) {
       course.modules = course.modules.map((mod) => {
         mod.lectures = (mod.lectures || []).map((lecture) => {
@@ -118,6 +120,20 @@ export const getCourse = catchAsync(async (req, res, next) => {
           return lecture;
         });
         return mod;
+      });
+    }
+
+    // Hide non-preview videos from sections (if exists)
+    if (course.sections?.length) {
+      course.sections = course.sections.map((section) => {
+        section.lectures = (section.lectures || []).map((lecture) => {
+          if (!lecture.isPreview) {
+            lecture.videoUrl = null;
+            lecture.videoPublicId = null;
+          }
+          return lecture;
+        });
+        return section;
       });
     }
   }
@@ -279,6 +295,9 @@ export const addLecture = catchAsync(async (req, res, next) => {
     isPreview,
     moduleId,
   } = req.body;
+
+  console.log("addLecture received duration:", duration);
+  console.log("addLecture req.body:", req.body);
 
   const course = await Course.findById(req.params.id);
 

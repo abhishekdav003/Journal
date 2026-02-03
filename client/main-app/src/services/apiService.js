@@ -79,7 +79,28 @@ export const getTutorLearners = () => API.get("/enrollments/tutor/my-students");
 export const getTutorReviews = () => API.get("/reviews/tutor");
 export const replyToReview = (id, data) =>
   API.patch(`/reviews/${id}/reply`, data);
+export const getCourseReviews = (courseId) =>
+  API.get(`/reviews/course/${courseId}`);
+export const createReview = (courseId, data) =>
+  API.post(`/reviews/course/${courseId}`, data);
+export const updateReview = (reviewId, data) =>
+  API.patch(`/reviews/${reviewId}`, data);
+
+// Questions (Q&A)
+export const getCourseQuestions = (courseId) =>
+  API.get(`/questions/course/${courseId}`);
+export const createQuestion = (courseId, data) =>
+  API.post(`/questions/course/${courseId}`, data);
+export const answerQuestion = (questionId, data) =>
+  API.post(`/questions/${questionId}/answer`, data);
+
+// Progress Tracking
+export const updateLectureProgress = (courseId, data) =>
+  API.patch(`/enrollments/${courseId}/progress`, data);
+export const getEnrollmentProgress = (courseId) =>
+  API.get(`/enrollments/${courseId}`);
 
 // Public Stats (no auth required)
 export const getPlatformStats = () => API.get("/stats/platform");
-export const getPublicReviews = (limit = 6) => API.get(`/stats/reviews?limit=${limit}`);
+export const getPublicReviews = (limit = 6) =>
+  API.get(`/stats/reviews?limit=${limit}`);

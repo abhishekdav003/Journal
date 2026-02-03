@@ -49,12 +49,43 @@ export const createEnrollment = catchAsync(async (req, res, next) => {
     return next(new AppError("Already enrolled in this course", 400));
   }
 
+  // Initialize progress array with all lectures
+  const progress = [];
+
+  // Add lectures from sections/modules
+  if (course.sections?.length > 0) {
+    course.sections.forEach((section) => {
+      section.lectures?.forEach((lecture) => {
+        progress.push({
+          lecture: lecture._id,
+          completed: false,
+        });
+      });
+    });
+  } else if (course.modules?.length > 0) {
+    course.modules.forEach((module) => {
+      module.lectures?.forEach((lecture) => {
+        progress.push({
+          lecture: lecture._id,
+          completed: false,
+        });
+      });
+    });
+  } else if (course.lectures?.length > 0) {
+    course.lectures.forEach((lecture) => {
+      progress.push({
+        lecture: lecture._id,
+        completed: false,
+      });
+    });
+  }
+
   // Create enrollment
   const enrollment = await Enrollment.create({
     student: req.user._id,
     course: courseId,
     enrolledAt: Date.now(),
-    progress: [], // Empty array initially
+    progress: progress,
     completionPercentage: 0,
   });
 
@@ -122,19 +153,25 @@ export const updateProgress = catchAsync(async (req, res, next) => {
   }
 
   // Find and update the lecture progress
-  const lectureProgress = enrollment.progress.find(
+  let lectureProgress = enrollment.progress.find(
     (p) => p.lecture.toString() === lectureId,
   );
 
   if (!lectureProgress) {
-    return next(new AppError("Lecture not found in this course", 404));
-  }
-
-  lectureProgress.completed = completed;
-  if (completed) {
-    lectureProgress.completedAt = Date.now();
+    // Add lecture to progress if it doesn't exist
+    lectureProgress = {
+      lecture: lectureId,
+      completed: completed,
+      completedAt: completed ? Date.now() : undefined,
+    };
+    enrollment.progress.push(lectureProgress);
   } else {
-    lectureProgress.completedAt = undefined;
+    lectureProgress.completed = completed;
+    if (completed) {
+      lectureProgress.completedAt = Date.now();
+    } else {
+      lectureProgress.completedAt = undefined;
+    }
   }
 
   // Update completion percentage
