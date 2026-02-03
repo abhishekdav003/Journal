@@ -7,14 +7,16 @@ import {
   checkEnrollment,
   createEnrollment,
 } from "../controllers/enrollmentController.js";
-import { protect, restrictTo } from "../middleware/auth.js";
+import { protect, restrictTo, optionalAuth } from "../middleware/auth.js";
 
 const router = express.Router();
 
-// All enrollment routes require authentication
+// Public route with optional auth - check enrollment
+router.get("/check/:courseId", optionalAuth, checkEnrollment);
+
+// All other enrollment routes require authentication
 router.use(protect);
 
-router.get("/check/:courseId", checkEnrollment);
 router.post("/", createEnrollment);
 
 // --- TUTOR ROUTES ---

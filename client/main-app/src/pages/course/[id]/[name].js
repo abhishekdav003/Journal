@@ -47,8 +47,8 @@ export default function CourseDetail() {
     try {
       if (!id) return;
       const baseURL =
-        process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
-      const response = await axios.get(`${baseURL}/api/courses/${id}`);
+        process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+      const response = await axios.get(`${baseURL}/courses/${id}`);
       // Backend returns { success: true, data: { course, isEnrolled } }
       const courseData =
         response.data.data?.course || response.data.course || response.data;
@@ -81,7 +81,10 @@ export default function CourseDetail() {
 
   const checkEnrollment = async (token) => {
     try {
-      if (!token || !id) return;
+      if (!token || !id) {
+        setEnrolled(false);
+        return;
+      }
       const baseURL =
         process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
       const response = await axios.get(
@@ -93,6 +96,7 @@ export default function CourseDetail() {
       setEnrolled(response.data.enrolled || false);
     } catch (error) {
       console.error("Error checking enrollment:", error);
+      setEnrolled(false);
     }
   };
 
@@ -345,15 +349,24 @@ export default function CourseDetail() {
                 Instructor
               </h2>
               <div className="flex gap-4">
-                <img
-                  src={
-                    course.tutor?.avatar ||
-                    course.instructorAvatar ||
-                    "https://via.placeholder.com/100"
-                  }
-                  alt={course.tutor?.name || "Instructor"}
-                  className="w-24 h-24 rounded-full object-cover border-4 border-white shadow-lg"
-                />
+                <div className="relative w-24 h-24 rounded-full overflow-hidden border-4 border-white shadow-lg bg-gradient-to-br from-purple-500 to-pink-500 flex items-center justify-center">
+                  {course.tutor?.avatar ? (
+                    <img
+                      src={course.tutor.avatar}
+                      alt={course.tutor?.name || "Instructor"}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.target.style.display = "none";
+                        const parent = e.target.parentElement;
+                        parent.innerHTML = `<span class="text-3xl font-bold text-white">${(course.tutor?.name || "T")[0].toUpperCase()}</span>`;
+                      }}
+                    />
+                  ) : (
+                    <span className="text-3xl font-bold text-white">
+                      {(course.tutor?.name || "T")[0].toUpperCase()}
+                    </span>
+                  )}
+                </div>
                 <div>
                   <a
                     href="#"
@@ -386,6 +399,11 @@ export default function CourseDetail() {
                     src={course.thumbnail}
                     alt={course.title}
                     className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.target.style.display = "none";
+                      e.target.parentElement.innerHTML =
+                        '<svg class="text-white text-6xl opacity-50 w-16 h-16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>';
+                    }}
                   />
                 ) : (
                   <FiPlay className="text-white text-6xl opacity-50" />

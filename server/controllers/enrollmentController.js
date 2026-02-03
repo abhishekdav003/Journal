@@ -5,8 +5,17 @@ import { catchAsync } from "../utils/catchAsync.js";
 
 // @desc    Check if user is enrolled in a course
 // @route   GET /api/enrollments/check/:courseId
-// @access  Private
+// @access  Public (but requires token if user wants to check enrollment)
 export const checkEnrollment = catchAsync(async (req, res, next) => {
+  // If no user (not authenticated), return not enrolled
+  if (!req.user) {
+    return res.status(200).json({
+      success: true,
+      enrolled: false,
+      data: null,
+    });
+  }
+
   const enrollment = await Enrollment.findOne({
     student: req.user._id,
     course: req.params.courseId,

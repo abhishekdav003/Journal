@@ -34,13 +34,14 @@ export default function LoginForm({ role }) {
 
         // Redirect based on role
         setTimeout(() => {
-          if (userData.role === "student") {
-            router.push(`/user/profile`);
-          } else if (userData.role === "tutor") {
-            router.push(`/tutor/dashboard`);
-          } else {
-            router.push("/");
-          }
+          router.push("/");
+          // if (userData.role === "student") {
+          //   router.push(`/user/profile`);
+          // } else if (userData.role === "tutor") {
+          //   router.push(`/tutor/dashboard`);
+          // } else {
+          //   router.push("/");
+          // }
         }, 1000);
       } else {
         throw new Error("Invalid response from server");
