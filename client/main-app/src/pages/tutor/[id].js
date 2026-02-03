@@ -36,6 +36,28 @@ export default function TutorProfile() {
     fetchTutorProfile();
   }, [id]);
 
+  // Calculate total students across all courses
+  const getTotalStudents = () => {
+    return courses.reduce((sum, course) => {
+      const studentCount = Array.isArray(course.enrolledStudents)
+        ? course.enrolledStudents.length
+        : 0;
+      return sum + studentCount;
+    }, 0);
+  };
+
+  // Calculate average rating (only count courses with rating > 0)
+  const getAverageRating = () => {
+    const ratedCourses = courses.filter((course) => course.rating > 0);
+    if (ratedCourses.length === 0) return null;
+
+    const totalRating = ratedCourses.reduce(
+      (sum, course) => sum + course.rating,
+      0,
+    );
+    return (totalRating / ratedCourses.length).toFixed(1);
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-linear-to-br from-slate-950 via-purple-900 to-slate-950 flex items-center justify-center">
@@ -135,11 +157,7 @@ export default function TutorProfile() {
                       <div>
                         <p className="text-gray-400 text-sm">Total Students</p>
                         <p className="text-white text-xl font-bold">
-                          {courses.reduce(
-                            (sum, course) =>
-                              sum + (course.enrolledStudents || 0),
-                            0,
-                          )}
+                          {getTotalStudents()}
                         </p>
                       </div>
                     </div>
@@ -148,14 +166,7 @@ export default function TutorProfile() {
                       <div>
                         <p className="text-gray-400 text-sm">Avg Rating</p>
                         <p className="text-white text-xl font-bold">
-                          {courses.length > 0
-                            ? (
-                                courses.reduce(
-                                  (sum, course) => sum + (course.rating || 0),
-                                  0,
-                                ) / courses.length
-                              ).toFixed(1)
-                            : "N/A"}
+                          {getAverageRating() || "New"}
                         </p>
                       </div>
                     </div>
@@ -258,7 +269,9 @@ export default function TutorProfile() {
               <div className="text-center py-16">
                 <FaBook className="text-6xl text-purple-400/30 mx-auto mb-4" />
                 <p className="text-gray-400 text-xl">
-                  {"This tutor hasn't published any courses yet. Please check back later."}
+                  {
+                    "This tutor hasn't published any courses yet. Please check back later."
+                  }
                 </p>
               </div>
             )}
