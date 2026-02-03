@@ -42,11 +42,17 @@ app.use(
   }),
 );
 
-// Rate limiting
+// Rate limiting - more relaxed for development
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
+  windowMs: 1 * 60 * 1000, // 1 minute window
+  max: process.env.NODE_ENV === "production" ? 100 : 500, // 500 requests in dev, 100 in prod
   message: "Too many requests from this IP, please try again later",
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => {
+    // Skip rate limiting for health check
+    return req.path === "/health";
+  },
 });
 app.use("/api", limiter);
 
