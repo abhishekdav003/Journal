@@ -1,30 +1,46 @@
+/* eslint-disable @next/next/no-img-element */
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
-import { getCourse } from "@/services/apiService";
+import {
+  getCourse,
+  getCourseReviews,
+  createReview,
+  updateReview,
+} from "@/services/apiService";
 import { useAuth } from "@/context/AuthContext";
+import toast from "react-hot-toast";
 import {
   FiPlay,
   FiChevronDown,
-  FiChevronUp,
+  FiChevronRight,
   FiStar,
   FiUsers,
   FiClock,
-  FiAward,
-  FiShare2,
-  FiHeart,
+  FiBookOpen,
+  FiCheckCircle,
   FiX,
-  FiMenu,
+  FiList,
+  FiMaximize,
+  FiVolume2,
+  FiSettings,
 } from "react-icons/fi";
-import Image from "next/image";
 
 export default function LearnCourse() {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
   const [course, setCourse] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [activeModule, setActiveModule] = useState(0);
+  const [expandedSections, setExpandedSections] = useState(new Set([0]));
   const [activeLecture, setActiveLecture] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [activeTab, setActiveTab] = useState("overview");
+  const [reviews, setReviews] = useState([]);
+  const [reviewsBreakdown, setReviewsBreakdown] = useState({});
+  const [userRating, setUserRating] = useState(0);
+  const [userComment, setUserComment] = useState("");
+  const [submittingReview, setSubmittingReview] = useState(false);
+  const [userReview, setUserReview] = useState(null);
+  const [isEditingReview, setIsEditingReview] = useState(false);
 
   const { id } = router.query;
 
@@ -34,17 +50,49 @@ export default function LearnCourse() {
     }
   }, [id]);
 
+  useEffect(() => {
+    if (id && activeTab === "reviews") {
+      fetchReviews();
+    }
+  }, [id, activeTab]);
+
   const fetchCourse = async () => {
     try {
       setLoading(true);
       const response = await getCourse(id);
       if (response.data.success) {
-        setCourse(response.data.data.course);
-        // Set first lecture as active
-        if (response.data.data.course.modules?.length > 0) {
-          setActiveLecture(response.data.data.course.modules[0]?.lectures?.[0]);
-        } else if (response.data.data.course.lectures?.length > 0) {
-          setActiveLecture(response.data.data.course.lectures[0]);
+        const courseData = response.data.data.course;
+        setCourse(courseData);
+
+        console.log("Course data:", courseData);
+
+        // Set first lecture as active - check both sections and modules
+        if (
+          courseData.sections?.length > 0 &&
+          courseData.sections[0].lectures?.length > 0
+        ) {
+          setActiveLecture(courseData.sections[0].lectures[0]);
+          console.log(
+            "First lecture from sections:",
+            courseData.sections[0].lectures[0],
+          );
+        } else if (
+          courseData.modules?.length > 0 &&
+          courseData.modules[0].lectures?.length > 0
+        ) {
+          setActiveLecture(courseData.modules[0].lectures[0]);
+          console.log(
+            "First lecture from modules:",
+            courseData.modules[0].lectures[0],
+          );
+        } else if (courseData.lectures?.length > 0) {
+          setActiveLecture(courseData.lectures[0]);
+          console.log(
+            "First lecture from direct lectures:",
+            courseData.lectures[0],
+          );
+        } else {
+          console.log("No lectures found in course");
         }
       }
     } catch (error) {
@@ -54,9 +102,141 @@ export default function LearnCourse() {
     }
   };
 
+  const toggleSection = (index) => {
+    const newExpanded = new Set(expandedSections);
+    if (newExpanded.has(index)) {
+      newExpanded.delete(index);
+    } else {
+      newExpanded.add(index);
+    }
+    setExpandedSections(newExpanded);
+  };
+
+  const getTotalStats = () => {
+    let totalLectures = 0;
+    let totalDuration = 0;
+
+    // Check sections first (new structure)
+    if (course?.sections?.length > 0) {
+      course.sections.forEach((section) => {
+        if (section.lectures) {
+          totalLectures += section.lectures.length;
+          section.lectures.forEach((lecture) => {
+            totalDuration += lecture.duration || 0;
+          });
+        }
+      });
+    }
+    // Fallback to modules (old structure)
+    else if (course?.modules?.length > 0) {
+      course.modules.forEach((module) => {
+        if (module.lectures) {
+          totalLectures += module.lectures.length;
+          module.lectures.forEach((lecture) => {
+            totalDuration += lecture.duration || 0;
+          });
+        }
+      });
+    }
+    // Fallback to direct lectures
+    else if (course?.lectures?.length > 0) {
+      totalLectures = course.lectures.length;
+      course.lectures.forEach((lecture) => {
+        totalDuration += lecture.duration || 0;
+      });
+    }
+
+    return { lectures: totalLectures, duration: totalDuration };
+  };
+
+  const fetchReviews = async () => {
+    try {
+      const response = await getCourseReviews(id);
+      if (response.data.success) {
+        const allReviews = response.data.data.reviews;
+        setReviews(allReviews);
+        setReviewsBreakdown(response.data.data.breakdown);
+
+        // Find user's existing review
+        if (user) {
+          const existingReview = allReviews.find(
+            (review) => review.student?._id === user._id,
+          );
+          if (existingReview) {
+            setUserReview(existingReview);
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Failed to fetch reviews:", error);
+    }
+  };
+
+  const handleSubmitReview = async () => {
+    if (!userRating) {
+      toast.error("Please select a rating");
+      return;
+    }
+    if (!userComment.trim()) {
+      toast.error("Please write a review");
+      return;
+    }
+
+    try {
+      setSubmittingReview(true);
+
+      if (isEditingReview && userReview) {
+        // Update existing review
+        const response = await updateReview(userReview._id, {
+          rating: userRating,
+          comment: userComment,
+        });
+
+        if (response.data.success) {
+          toast.success("Review updated successfully!");
+          setIsEditingReview(false);
+          fetchReviews();
+        }
+      } else {
+        // Create new review
+        const response = await createReview(id, {
+          rating: userRating,
+          comment: userComment,
+        });
+
+        if (response.data.success) {
+          toast.success("Review submitted successfully!");
+          setUserRating(0);
+          setUserComment("");
+          fetchReviews();
+        }
+      }
+    } catch (error) {
+      const message =
+        error.response?.data?.message || "Failed to submit review";
+      toast.error(message);
+    } finally {
+      setSubmittingReview(false);
+    }
+  };
+
+  const handleEditReview = () => {
+    if (userReview) {
+      setUserRating(userReview.rating);
+      setUserComment(userReview.comment);
+      setIsEditingReview(true);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setUserRating(0);
+    setUserComment("");
+    setIsEditingReview(false);
+  };
+
   if (loading || !course) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-900">
+      <div className="flex items-center justify-center min-h-screen bg-[#1c1d1f]">
         <div className="text-center">
           <div className="w-16 h-16 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <p className="text-white text-lg">Loading course...</p>
@@ -65,203 +245,615 @@ export default function LearnCourse() {
     );
   }
 
-  const lectures =
-    course.modules?.length > 0
-      ? course.modules[activeModule]?.lectures || []
-      : course.lectures || [];
+  const stats = getTotalStats();
 
   return (
-    <div className="flex h-screen bg-gray-900 text-white">
-      {/* Video Player Section */}
-      <div className="flex-1 flex flex-col">
-        {/* Video Player */}
-        <div className="bg-black flex-1 flex items-center justify-center">
-          {activeLecture?.videoUrl ? (
-            <video
-              src={activeLecture.videoUrl}
-              controls
-              className="w-full h-full"
-            />
-          ) : (
-            <div className="text-center">
-              <FiPlay className="text-6xl text-gray-600 mx-auto mb-4" />
-              <p className="text-gray-500">
-                No video available for this lecture
-              </p>
-            </div>
-          )}
-        </div>
-
-        {/* Video Info */}
-        <div className="bg-gray-800 p-6 border-t border-gray-700">
-          <h2 className="text-2xl font-bold mb-2">{activeLecture?.title}</h2>
-          <p className="text-gray-300 mb-4">{activeLecture?.description}</p>
-
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <div className="flex gap-6">
-              <div className="flex items-center gap-2">
-                <FiClock className="text-purple-400" />
-                <span className="text-sm">
-                  {activeLecture?.duration || 0} min
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <FiAward className="text-yellow-400" />
-                <span className="text-sm">Preview</span>
-              </div>
-            </div>
-            <div className="flex gap-3">
-              <button className="p-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-all">
-                <FiShare2 size={20} />
-              </button>
-              <button className="p-2 bg-gray-700 hover:bg-gray-600 rounded-lg transition-all">
-                <FiHeart size={20} />
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Sidebar - Courses List */}
-      <div
-        className={`${
-          sidebarOpen ? "w-96" : "w-0"
-        } bg-gray-800 border-l border-gray-700 flex flex-col transition-all duration-300 overflow-hidden`}
-      >
-        {/* Header */}
-        <div className="p-4 border-b border-gray-700 flex items-center justify-between">
-          <h3 className="font-bold text-lg">Lessons</h3>
+    <div className="flex flex-col h-screen bg-[#1c1d1f] text-white overflow-hidden">
+      {/* Top Header Bar */}
+      <div className="bg-[#2d2f31] border-b border-gray-700 px-4 py-2 flex items-center justify-between">
+        <div className="flex items-center gap-4">
           <button
-            onClick={() => setSidebarOpen(false)}
-            className="md:hidden text-gray-400 hover:text-white"
+            onClick={() => router.back()}
+            className="text-gray-400 hover:text-white transition-colors"
           >
             <FiX size={24} />
           </button>
+          <div>
+            <h1 className="text-sm font-semibold line-clamp-1">
+              {course.title}
+            </h1>
+            <div className="flex items-center gap-2 text-xs text-gray-400 mt-0.5">
+              <span className="flex items-center gap-1">
+                <FiStar className="text-yellow-500" size={12} />
+                {course.rating || "4.8"}
+              </span>
+              <span>•</span>
+              <span>{stats.lectures} lectures</span>
+              <span>•</span>
+              <span>
+                {Math.floor(stats.duration / 60)}h {stats.duration % 60}m
+              </span>
+            </div>
+          </div>
         </div>
+        <button
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+          className="flex items-center gap-2 text-sm px-3 py-2 hover:bg-gray-700 rounded transition-colors"
+        >
+          <FiList size={18} />
+          <span className="hidden md:inline">Course content</span>
+        </button>
+      </div>
 
-        {/* Course Info */}
-        <div className="p-4 border-b border-gray-700">
-          <h4 className="font-bold text-sm mb-2">{course.title}</h4>
-          <div className="flex items-center gap-2 text-xs text-gray-400">
-            <span className="flex items-center gap-1">
-              <FiStar className="text-yellow-400" />
-              4.8
-            </span>
-            <span>•</span>
-            <span className="flex items-center gap-1">
-              <FiUsers />
-              {course.enrolledStudents?.length || 0}
-            </span>
+      {/* Main Content Area */}
+      <div className="flex flex-1 overflow-hidden">
+        {/* Video Player Section */}
+        <div className="flex-1 flex flex-col">
+          {/* Video Player */}
+          <div className="relative bg-black" style={{ height: "60vh" }}>
+            {activeLecture?.videoUrl ? (
+              <video
+                key={activeLecture._id}
+                src={activeLecture.videoUrl}
+                controls
+                controlsList="nodownload"
+                className="w-full h-full"
+                autoPlay
+              >
+                Your browser does not support the video tag.
+              </video>
+            ) : (
+              <div className="flex items-center justify-center h-full bg-gray-900">
+                <div className="text-center">
+                  <div className="w-20 h-20 bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <FiPlay className="text-4xl text-gray-600" />
+                  </div>
+                  <p className="text-gray-500">
+                    Select a lecture to start learning
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Tabs & Content Below Video */}
+          <div className="flex-1 bg-[#1c1d1f] overflow-y-auto">
+            {/* Tabs */}
+            <div className="border-b border-gray-700 px-6">
+              <div className="flex gap-8">
+                {["Overview", "Q&A", "Reviews"].map((tab) => (
+                  <button
+                    key={tab}
+                    onClick={() => setActiveTab(tab.toLowerCase())}
+                    className={`py-4 text-sm font-semibold border-b-2 transition-colors ${
+                      activeTab === tab.toLowerCase()
+                        ? "border-white text-white"
+                        : "border-transparent text-gray-400 hover:text-white"
+                    }`}
+                  >
+                    {tab}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Tab Content */}
+            <div className="p-6">
+              {activeTab === "overview" && activeLecture && (
+                <div>
+                  <h2 className="text-2xl font-bold mb-3">
+                    {activeLecture.title}
+                  </h2>
+                  <p className="text-gray-300 leading-relaxed mb-6">
+                    {activeLecture.description || course.description}
+                  </p>
+
+                  {/* Instructor Info */}
+                  {course.tutor && (
+                    <div className="mt-8 border-t border-gray-700 pt-6">
+                      <h3 className="text-lg font-semibold mb-4">
+                        About the instructor
+                      </h3>
+                      <div className="flex items-start gap-4">
+                        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center text-white font-bold text-xl overflow-hidden shrink-0">
+                          {course.tutor.avatar ? (
+                            <img
+                              src={course.tutor.avatar}
+                              alt={course.tutor.name}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            course.tutor.name?.charAt(0).toUpperCase() || "T"
+                          )}
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-lg">
+                            {course.tutor.name}
+                          </h4>
+                          <p className="text-sm text-gray-400 mt-1">
+                            {course.tutor.bio || "Expert Instructor"}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {activeTab === "q&a" && (
+                <div>
+                  <div className="mb-6">
+                    <h3 className="text-lg font-semibold mb-3">
+                      Ask a Question
+                    </h3>
+                    <div className="space-y-3">
+                      <textarea
+                        placeholder="Type your question here..."
+                        className="w-full bg-[#2d2f31] border border-gray-700 rounded-lg p-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-600 resize-none"
+                        rows={4}
+                      />
+                      <button className="bg-purple-600 hover:bg-purple-700 text-white px-6 py-2 rounded-lg text-sm font-semibold transition-colors">
+                        Post Question
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="border-t border-gray-700 pt-6">
+                    <h3 className="text-lg font-semibold mb-4">
+                      All Questions
+                    </h3>
+                    <div className="text-center py-8">
+                      <FiBookOpen className="text-5xl text-gray-600 mx-auto mb-3" />
+                      <p className="text-gray-400 text-sm">
+                        No questions yet. Be the first to ask!
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === "reviews" && (
+                <div>
+                  {/* Course Rating Summary */}
+                  {reviews.length > 0 && (
+                    <div className="mb-8 p-6 bg-[#2d2f31] rounded-lg">
+                      <div className="flex items-start gap-8">
+                        <div className="text-center">
+                          <div className="text-5xl font-bold mb-2">
+                            {course.rating || "0"}
+                          </div>
+                          <div className="flex items-center justify-center gap-1 mb-2">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <FiStar
+                                key={star}
+                                className={`${
+                                  star <= Math.round(course.rating || 0)
+                                    ? "text-yellow-500 fill-yellow-500"
+                                    : "text-gray-600"
+                                }`}
+                                size={16}
+                              />
+                            ))}
+                          </div>
+                          <p className="text-sm text-gray-400">
+                            {reviews.length}{" "}
+                            {reviews.length === 1 ? "review" : "reviews"}
+                          </p>
+                        </div>
+                        <div className="flex-1">
+                          <h3 className="font-semibold mb-3">
+                            Rating Breakdown
+                          </h3>
+                          {[5, 4, 3, 2, 1].map((stars) => (
+                            <div
+                              key={stars}
+                              className="flex items-center gap-3 mb-2"
+                            >
+                              <div className="flex items-center gap-1 w-16">
+                                {[...Array(stars)].map((_, i) => (
+                                  <FiStar
+                                    key={i}
+                                    className="text-yellow-500 fill-yellow-500"
+                                    size={12}
+                                  />
+                                ))}
+                              </div>
+                              <div className="flex-1 h-2 bg-gray-700 rounded-full overflow-hidden">
+                                <div
+                                  className="h-full bg-yellow-500"
+                                  style={{
+                                    width: `${reviewsBreakdown[stars] || 0}%`,
+                                  }}
+                                />
+                              </div>
+                              <span className="text-sm text-gray-400 w-12 text-right">
+                                {reviewsBreakdown[stars] || 0}%
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* User's Review or Add Review Form */}
+                  {userReview && !isEditingReview ? (
+                    // Show user's existing review with edit option
+                    <div className="mb-8 p-6 bg-[#2d2f31] rounded-lg border-2 border-purple-600">
+                      <div className="flex items-start justify-between mb-4">
+                        <h3 className="text-lg font-semibold">Your Review</h3>
+                        <button
+                          onClick={handleEditReview}
+                          className="text-sm text-purple-400 hover:text-purple-300 transition-colors flex items-center gap-1"
+                        >
+                          <FiSettings size={16} />
+                          Edit Review
+                        </button>
+                      </div>
+                      <div className="space-y-3">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-400 mb-1">
+                            Your Rating
+                          </label>
+                          <div className="flex items-center gap-1">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <FiStar
+                                key={star}
+                                size={20}
+                                className={`${
+                                  star <= userReview.rating
+                                    ? "text-yellow-500 fill-yellow-500"
+                                    : "text-gray-600"
+                                }`}
+                              />
+                            ))}
+                            <span className="ml-2 text-sm text-gray-400">
+                              {userReview.rating} star
+                              {userReview.rating > 1 ? "s" : ""}
+                            </span>
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-400 mb-1">
+                            Your Comment
+                          </label>
+                          <p className="text-sm text-gray-300 leading-relaxed">
+                            {userReview.comment}
+                          </p>
+                        </div>
+                        <p className="text-xs text-gray-500 mt-2">
+                          Reviewed on{" "}
+                          {new Date(userReview.createdAt).toLocaleDateString()}
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    // Show review form (for new review or editing)
+                    <div className="mb-8 p-6 bg-[#2d2f31] rounded-lg">
+                      <h3 className="text-lg font-semibold mb-4">
+                        {isEditingReview
+                          ? "Edit Your Review"
+                          : "Leave a Review"}
+                      </h3>
+                      <div className="space-y-4">
+                        <div>
+                          <label className="block text-sm font-medium mb-2">
+                            Your Rating
+                          </label>
+                          <div className="flex items-center gap-2">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                              <button
+                                key={star}
+                                onClick={() => setUserRating(star)}
+                                className="transition-colors"
+                              >
+                                <FiStar
+                                  size={24}
+                                  className={`${
+                                    star <= userRating
+                                      ? "text-yellow-500 fill-yellow-500"
+                                      : "text-gray-600 hover:text-yellow-400"
+                                  }`}
+                                />
+                              </button>
+                            ))}
+                            {userRating > 0 && (
+                              <span className="ml-2 text-sm text-gray-400">
+                                {userRating} star{userRating > 1 ? "s" : ""}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium mb-2">
+                            Your Review
+                          </label>
+                          <textarea
+                            value={userComment}
+                            onChange={(e) => setUserComment(e.target.value)}
+                            placeholder="Share your thoughts about this course..."
+                            className="w-full bg-[#1c1d1f] border border-gray-700 rounded-lg p-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-purple-600 resize-none"
+                            rows={4}
+                          />
+                        </div>
+                        <div className="flex gap-3">
+                          <button
+                            onClick={handleSubmitReview}
+                            disabled={submittingReview}
+                            className="bg-purple-600 hover:bg-purple-700 disabled:bg-gray-600 disabled:cursor-not-allowed text-white px-6 py-2 rounded-lg text-sm font-semibold transition-colors"
+                          >
+                            {submittingReview
+                              ? isEditingReview
+                                ? "Updating..."
+                                : "Submitting..."
+                              : isEditingReview
+                                ? "Update Review"
+                                : "Submit Review"}
+                          </button>
+                          {isEditingReview && (
+                            <button
+                              onClick={handleCancelEdit}
+                              className="bg-gray-700 hover:bg-gray-600 text-white px-6 py-2 rounded-lg text-sm font-semibold transition-colors"
+                            >
+                              Cancel
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Reviews List */}
+                  <div>
+                    <h3 className="text-lg font-semibold mb-4">
+                      Student Reviews
+                    </h3>
+                    {reviews.length > 0 ? (
+                      <div className="space-y-4">
+                        {reviews.map((review) => (
+                          <div
+                            key={review._id}
+                            className="p-4 bg-[#2d2f31] rounded-lg"
+                          >
+                            <div className="flex items-start gap-3">
+                              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-600 to-pink-600 flex items-center justify-center text-white font-bold overflow-hidden shrink-0">
+                                {review.student?.avatar ? (
+                                  <img
+                                    src={review.student.avatar}
+                                    alt={review.student.name}
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  review.student?.name
+                                    ?.charAt(0)
+                                    .toUpperCase() || "S"
+                                )}
+                              </div>
+                              <div className="flex-1">
+                                <div className="flex items-center justify-between mb-1">
+                                  <h4 className="font-semibold text-sm">
+                                    {review.student?.name || "Anonymous"}
+                                  </h4>
+                                  <span className="text-xs text-gray-400">
+                                    {new Date(
+                                      review.createdAt,
+                                    ).toLocaleDateString()}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-1 mb-2">
+                                  {[1, 2, 3, 4, 5].map((star) => (
+                                    <FiStar
+                                      key={star}
+                                      size={12}
+                                      className={`${
+                                        star <= review.rating
+                                          ? "text-yellow-500 fill-yellow-500"
+                                          : "text-gray-600"
+                                      }`}
+                                    />
+                                  ))}
+                                </div>
+                                <p className="text-sm text-gray-300">
+                                  {review.comment}
+                                </p>
+                                {review.tutorReply && (
+                                  <div className="mt-3 pl-4 border-l-2 border-purple-600">
+                                    <p className="text-xs font-semibold text-purple-400 mb-1">
+                                      Instructor Response:
+                                    </p>
+                                    <p className="text-sm text-gray-300">
+                                      {review.tutorReply}
+                                    </p>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8">
+                        <FiStar className="text-5xl text-gray-600 mx-auto mb-3" />
+                        <p className="text-gray-400 text-sm">
+                          No reviews yet. Be the first to review this course!
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Modules/Lectures List */}
-        <div className="flex-1 overflow-y-auto">
-          {course.modules && course.modules.length > 0 ? (
-            // Multiple Modules
-            course.modules.map((module, moduleIdx) => (
-              <div
-                key={module._id || moduleIdx}
-                className="border-b border-gray-700"
-              >
-                <button
-                  onClick={() =>
-                    setActiveModule(activeModule === moduleIdx ? -1 : moduleIdx)
-                  }
-                  className="w-full p-4 flex items-center justify-between hover:bg-gray-700 transition-all text-left"
-                >
-                  <span className="font-semibold text-sm">{module.title}</span>
-                  {activeModule === moduleIdx ? (
-                    <FiChevronUp />
-                  ) : (
-                    <FiChevronDown />
-                  )}
-                </button>
+        {/* Sidebar - Course Content */}
+        {sidebarOpen && (
+          <div className="w-full md:w-96 bg-[#2d2f31] border-l border-gray-700 flex flex-col overflow-hidden">
+            {/* Sidebar Header */}
+            <div className="p-4 border-b border-gray-700">
+              <h3 className="font-bold text-lg">Course content</h3>
+              <p className="text-xs text-gray-400 mt-1">
+                {stats.lectures} lectures • {Math.floor(stats.duration / 60)}h{" "}
+                {stats.duration % 60}m
+              </p>
+            </div>
 
-                {activeModule === moduleIdx && (
-                  <div className="bg-gray-900/50">
-                    {module.lectures?.map((lecture, lectureIdx) => (
+            {/* Sections List */}
+            <div className="flex-1 overflow-y-auto">
+              {/* Check sections first, then modules, then lectures */}
+              {course.sections?.length > 0 || course.modules?.length > 0 ? (
+                (course.sections || course.modules || []).map(
+                  (item, itemIdx) => (
+                    <div
+                      key={item._id || itemIdx}
+                      className="border-b border-gray-700"
+                    >
+                      {/* Section/Module Header */}
                       <button
-                        key={lecture._id || lectureIdx}
-                        onClick={() => setActiveLecture(lecture)}
-                        className={`w-full p-3 flex items-start gap-3 hover:bg-gray-700 transition-all text-left border-l-2 ${
-                          activeLecture?._id === lecture._id
-                            ? "border-purple-600 bg-gray-700"
-                            : "border-transparent"
-                        }`}
+                        onClick={() => toggleSection(itemIdx)}
+                        className="w-full p-4 flex items-center justify-between hover:bg-[#3e4042] transition-colors text-left"
                       >
-                        <FiPlay
-                          className={`shrink-0 mt-1 ${
-                            activeLecture?._id === lecture._id
-                              ? "text-purple-400"
-                              : "text-gray-500"
-                          }`}
-                        />
-                        <div className="min-w-0">
-                          <p className="text-xs font-semibold truncate">
-                            {lecture.title}
-                          </p>
-                          <p className="text-xs text-gray-400">
-                            {lecture.duration || 0} min
+                        <div className="flex-1 pr-2">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-xs font-semibold text-gray-400">
+                              {course.sections ? "Section" : "Module"}{" "}
+                              {itemIdx + 1}
+                            </span>
+                          </div>
+                          <h4 className="font-semibold text-sm">
+                            {item.title}
+                          </h4>
+                          <p className="text-xs text-gray-400 mt-1">
+                            {item.lectures?.length || 0} lectures •{" "}
+                            {item.lectures?.reduce(
+                              (sum, l) => sum + (l.duration || 0),
+                              0,
+                            )}{" "}
+                            min
                           </p>
                         </div>
+                        <FiChevronDown
+                          className={`transition-transform ${expandedSections.has(itemIdx) ? "rotate-180" : ""}`}
+                        />
                       </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            ))
-          ) : (
-            // Single Lectures List
-            <div>
-              {lectures.map((lecture, idx) => (
-                <button
-                  key={lecture._id || idx}
-                  onClick={() => setActiveLecture(lecture)}
-                  className={`w-full p-4 flex items-start gap-3 hover:bg-gray-700 transition-all text-left border-l-2 ${
-                    activeLecture?._id === lecture._id
-                      ? "border-purple-600 bg-gray-700"
-                      : "border-transparent"
-                  }`}
-                >
-                  <FiPlay
-                    className={`shrink-0 mt-1 ${
-                      activeLecture?._id === lecture._id
-                        ? "text-purple-400"
-                        : "text-gray-500"
-                    }`}
-                  />
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold truncate">
-                      {idx + 1}. {lecture.title}
-                    </p>
-                    <p className="text-xs text-gray-400">
-                      {lecture.duration || 0} min
-                    </p>
-                  </div>
-                </button>
-              ))}
+
+                      {/* Lectures List */}
+                      {expandedSections.has(itemIdx) && item.lectures && (
+                        <div className="bg-[#1c1d1f]">
+                          {item.lectures.map((lecture, lectureIdx) => (
+                            <button
+                              key={lecture._id || lectureIdx}
+                              onClick={() => setActiveLecture(lecture)}
+                              className={`w-full p-4 flex items-start gap-3 hover:bg-[#3e4042] transition-colors text-left ${
+                                activeLecture?._id === lecture._id
+                                  ? "bg-[#3e4042]"
+                                  : ""
+                              }`}
+                            >
+                              <div
+                                className={`shrink-0 mt-0.5 ${
+                                  activeLecture?._id === lecture._id
+                                    ? "text-white"
+                                    : "text-gray-500"
+                                }`}
+                              >
+                                {lecture.isCompleted ? (
+                                  <FiCheckCircle
+                                    size={16}
+                                    className="text-green-500"
+                                  />
+                                ) : (
+                                  <FiPlay size={16} />
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p
+                                  className={`text-sm ${
+                                    activeLecture?._id === lecture._id
+                                      ? "text-white font-medium"
+                                      : "text-gray-300"
+                                  }`}
+                                >
+                                  {lectureIdx + 1}. {lecture.title}
+                                </p>
+                                <div className="flex items-center gap-2 mt-1 text-xs text-gray-400">
+                                  <FiClock size={12} />
+                                  <span>{lecture.duration || 0} min</span>
+                                  {lecture.isPreview && (
+                                    <>
+                                      <span>•</span>
+                                      <span className="text-purple-400">
+                                        Preview
+                                      </span>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ),
+                )
+              ) : course.lectures?.length > 0 ? (
+                // Direct lectures without modules/sections
+                <div>
+                  {course.lectures.map((lecture, lectureIdx) => (
+                    <button
+                      key={lecture._id || lectureIdx}
+                      onClick={() => setActiveLecture(lecture)}
+                      className={`w-full p-4 flex items-start gap-3 hover:bg-[#3e4042] transition-colors text-left border-b border-gray-700 ${
+                        activeLecture?._id === lecture._id ? "bg-[#3e4042]" : ""
+                      }`}
+                    >
+                      <div
+                        className={`shrink-0 mt-0.5 ${
+                          activeLecture?._id === lecture._id
+                            ? "text-white"
+                            : "text-gray-500"
+                        }`}
+                      >
+                        {lecture.isCompleted ? (
+                          <FiCheckCircle size={16} className="text-green-500" />
+                        ) : (
+                          <FiPlay size={16} />
+                        )}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p
+                          className={`text-sm ${
+                            activeLecture?._id === lecture._id
+                              ? "text-white font-medium"
+                              : "text-gray-300"
+                          }`}
+                        >
+                          {lectureIdx + 1}. {lecture.title}
+                        </p>
+                        <div className="flex items-center gap-2 mt-1 text-xs text-gray-400">
+                          <FiClock size={12} />
+                          <span>{lecture.duration || 0} min</span>
+                          {lecture.isPreview && (
+                            <>
+                              <span>•</span>
+                              <span className="text-purple-400">Preview</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-8 text-center text-gray-400">
+                  <FiBookOpen className="text-4xl mx-auto mb-3" />
+                  <p>No course content available</p>
+                </div>
+              )}
             </div>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className="p-4 border-t border-gray-700">
-          <button className="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg transition-all">
-            Enroll Now - ₹{course.price}
-          </button>
-        </div>
+          </div>
+        )}
       </div>
-
-      {/* Mobile Toggle Sidebar */}
-      {!sidebarOpen && (
-        <button
-          onClick={() => setSidebarOpen(true)}
-          className="absolute right-4 bottom-4 md:hidden bg-purple-600 hover:bg-purple-700 p-3 rounded-lg"
-        >
-          <FiMenu size={24} />
-        </button>
-      )}
     </div>
   );
 }
