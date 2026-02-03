@@ -349,7 +349,10 @@ export default function Courses() {
                       className="w-full bg-linear-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white py-3 rounded-xl font-bold transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-2 group"
                       onClick={(e) => {
                         e.stopPropagation();
-                        router.push(`/course/${course._id}`);
+                        const courseName = course.title
+                          .toLowerCase()
+                          .replace(/\s+/g, "-");
+                        router.push(`/learn/${course._id}/${courseName}`);
                       }}
                     >
                       <FiPlayCircle size={18} />

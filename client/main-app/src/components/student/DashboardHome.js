@@ -1,9 +1,12 @@
+/* eslint-disable @next/next/no-img-element */
 import { useState, useEffect } from "react";
 import Image from "next/image";
+import { useRouter } from "next/router";
 import { FiClock, FiPlayCircle, FiMoreHorizontal } from "react-icons/fi";
 import { getDashboardStats } from "@/services/apiService";
 
 const DashboardHome = ({ user }) => {
+  const router = useRouter();
   const currentUser = user?.user || user || null;
   const [dashboardData, setDashboardData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -26,6 +29,11 @@ const DashboardHome = ({ user }) => {
       fetchDashboardData();
     }
   }, [currentUser]);
+
+  const handleContinueCourse = (courseId, courseTitle) => {
+    const courseName = courseTitle.toLowerCase().replace(/\s+/g, "-");
+    router.push(`/learn/${courseId}/${courseName}`);
+  };
 
   if (loading) {
     return (
@@ -144,10 +152,9 @@ const DashboardHome = ({ user }) => {
                 {/* Course Thumbnail */}
                 <div className="h-44 bg-linear-to-br from-[#2B2B40] to-[#1E1E2E] rounded-2xl mb-4 relative overflow-hidden flex items-center justify-center shadow-lg group-hover:shadow-purple-500/20 transition-all duration-300">
                   {course.thumbnail ? (
-                    <Image
+                    <img
                       src={course.thumbnail}
                       alt={course.title}
-                      fill
                       className="object-cover group-hover:scale-110 transition-transform duration-300"
                       sizes="(max-width: 768px) 100vw, 33vw"
                       style={{ borderRadius: "1rem" }}
@@ -184,7 +191,12 @@ const DashboardHome = ({ user }) => {
                 </div>
 
                 <div className="flex items-center justify-between gap-3">
-                  <button className="flex-1 bg-linear-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white py-3 rounded-xl text-sm font-bold transition-all duration-300 shadow-lg shadow-purple-500/30 hover:shadow-xl hover:shadow-purple-500/50 hover:scale-[1.02]">
+                  <button
+                    onClick={() =>
+                      handleContinueCourse(course._id, course.title)
+                    }
+                    className="flex-1 bg-linear-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white py-3 rounded-xl text-sm font-bold transition-all duration-300 shadow-lg shadow-purple-500/30 hover:shadow-xl hover:shadow-purple-500/50 hover:scale-[1.02]"
+                  >
                     Continue
                   </button>
                   <div className="w-14 h-14 rounded-full border-2 border-purple-500 flex items-center justify-center text-xs font-bold text-purple-400 bg-[#1E1E2E] shadow-lg group-hover:scale-110 transition-transform">
@@ -283,34 +295,47 @@ const DashboardHome = ({ user }) => {
                 <p className="text-gray-400 text-sm">No tutors yet</p>
               </div>
             ) : (
-              activeCourses.slice(0, 3).map((course) => (
-                <div
-                  key={course._id}
-                  className="bg-linear-to-r from-[#2B2B40] to-[#1E1E2E] p-4 rounded-2xl flex items-center gap-3 border border-gray-700/50 hover:border-purple-500/50 transition-all duration-300 group hover:shadow-lg hover:shadow-purple-500/20"
-                >
-                  <div className="w-12 h-12 rounded-full bg-linear-to-br from-purple-600 to-pink-600 flex items-center justify-center text-white font-bold overflow-hidden shadow-lg group-hover:scale-110 transition-transform">
-                    {course.tutor?.avatar ? (
-                      <Image
-                        src={course.tutor.avatar}
-                        alt={course.tutor.name}
-                        fill
-                        className="object-cover"
-                        sizes="48px"
-                        style={{ borderRadius: "9999px" }}
-                      />
-                    ) : (
-                      course.tutor?.name?.charAt(0).toUpperCase() || "T"
-                    )}
+              (() => {
+                // Deduplicate tutors by tutor ID
+                const uniqueTutors = [];
+                const seenTutorIds = new Set();
+
+                activeCourses.forEach((course) => {
+                  const tutorId = course.tutor?._id;
+                  if (tutorId && !seenTutorIds.has(tutorId)) {
+                    seenTutorIds.add(tutorId);
+                    uniqueTutors.push(course);
+                  }
+                });
+
+                return uniqueTutors.slice(0, 3).map((course) => (
+                  <div
+                    key={course._id}
+                    className="bg-linear-to-r from-[#2B2B40] to-[#1E1E2E] p-4 rounded-2xl flex items-center gap-3 border border-gray-700/50 hover:border-purple-500/50 transition-all duration-300 group hover:shadow-lg hover:shadow-purple-500/20"
+                  >
+                    <div className="w-12 h-12 rounded-full bg-linear-to-br from-purple-600 to-pink-600 flex items-center justify-center text-white font-bold overflow-hidden shadow-lg group-hover:scale-110 transition-transform">
+                      {course.tutor?.avatar ? (
+                        <img
+                          src={course.tutor.avatar}
+                          alt={course.tutor.name}
+                          className="object-cover"
+                          sizes="48px"
+                          style={{ borderRadius: "9999px" }}
+                        />
+                      ) : (
+                        course.tutor?.name?.charAt(0).toUpperCase() || "T"
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-bold text-white group-hover:text-purple-400 transition-colors">
+                        {course.tutor?.name || "Tutor"}
+                      </p>
+                      <p className="text-xs text-gray-400">{course.category}</p>
+                    </div>
+                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
                   </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-bold text-white group-hover:text-purple-400 transition-colors">
-                      {course.tutor?.name || "Tutor"}
-                    </p>
-                    <p className="text-xs text-gray-400">{course.category}</p>
-                  </div>
-                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                </div>
-              ))
+                ));
+              })()
             )}
           </div>
           {activeCourses.length > 0 && (
