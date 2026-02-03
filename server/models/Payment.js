@@ -38,10 +38,14 @@ const paymentSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["pending", "completed", "failed", "refunded"],
+      enum: ["pending", "completed", "failed", "refunded", "expired"],
       default: "pending",
     },
     paymentMethod: String,
+    expiresAt: {
+      type: Date,
+      default: () => new Date(Date.now() + 30 * 60 * 1000), // 30 minutes from creation
+    },
   },
   {
     timestamps: true,
