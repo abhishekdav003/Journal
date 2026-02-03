@@ -35,10 +35,89 @@ const DashboardHome = ({ user }) => {
     router.push(`/learn/${courseId}/${courseName}`);
   };
 
+  const handleViewTutorProfile = (tutorId) => {
+    router.push(`/tutor/${tutorId}`);
+  };
+
+  // Calculate tutor's average rating from their courses (only count courses with ratings > 0)
+  const calculateTutorRating = (tutorId) => {
+    const tutorCourses = activeCourses.filter(
+      course => course.tutor?._id === tutorId && course.rating > 0
+    );
+    
+    if (tutorCourses.length === 0) return null;
+    
+    const totalRating = tutorCourses.reduce((sum, course) => sum + course.rating, 0);
+    const avgRating = totalRating / tutorCourses.length;
+    
+    return avgRating.toFixed(1);
+  };
+
+  // Count total students enrolled in tutor's courses
+  const countTutorStudents = (tutorId) => {
+    const tutorCourses = activeCourses.filter(
+      course => course.tutor?._id === tutorId
+    );
+    
+    const totalStudents = tutorCourses.reduce(
+      (sum, course) => sum + (course.enrolledStudents?.length || 0),
+      0
+    );
+    
+    return totalStudents;
+  };
+
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-96">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
+      <div className="space-y-6 animate-pulse">
+        {/* Welcome Banner Skeleton */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 bg-[#1E1E2E] p-8 rounded-3xl border border-gray-800/50">
+            <div className="h-4 bg-gray-700 rounded w-1/3 mb-4"></div>
+            <div className="h-8 bg-gray-700 rounded w-2/3 mb-3"></div>
+            <div className="h-4 bg-gray-700 rounded w-1/2"></div>
+          </div>
+          <div className="bg-[#1E1E2E] p-6 rounded-3xl border border-gray-800/50">
+            <div className="h-12 bg-gray-700 rounded-full w-12 mb-4"></div>
+            <div className="h-12 bg-gray-700 rounded w-20 mt-4"></div>
+            <div className="h-4 bg-gray-700 rounded w-32 mt-2"></div>
+          </div>
+        </div>
+        {/* Active Courses Skeleton */}
+        <div>
+          <div className="h-6 bg-gray-700 rounded w-48 mb-6"></div>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="bg-[#1E1E2E] p-5 rounded-3xl border border-gray-800/50">
+                <div className="h-44 bg-gray-700 rounded-2xl mb-4"></div>
+                <div className="h-5 bg-gray-700 rounded w-3/4 mb-3"></div>
+                <div className="flex gap-3 mb-5">
+                  <div className="h-6 bg-gray-700 rounded w-20"></div>
+                  <div className="h-6 bg-gray-700 rounded w-16"></div>
+                </div>
+                <div className="flex gap-3">
+                  <div className="h-12 bg-gray-700 rounded-xl flex-1"></div>
+                  <div className="h-12 w-12 bg-gray-700 rounded-full"></div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        {/* Performance Skeleton */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 bg-[#1E1E2E] p-6 rounded-3xl border border-gray-800/50">
+            <div className="h-6 bg-gray-700 rounded w-48 mb-6"></div>
+            <div className="h-52 bg-gray-700 rounded-xl"></div>
+          </div>
+          <div className="bg-[#1E1E2E] p-6 rounded-3xl border border-gray-800/50">
+            <div className="h-6 bg-gray-700 rounded w-32 mb-4"></div>
+            <div className="space-y-3">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-20 bg-gray-700 rounded-2xl"></div>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
@@ -144,7 +223,25 @@ const DashboardHome = ({ user }) => {
               </p>
             </div>
           ) : (
-            activeCourses.slice(0, 3).map((course) => (
+            activeCourses
+              .sort((a, b) => {
+                // First priority: incomplete courses (progress < 100)
+                const aIncomplete = a.progress < 100 ? 1 : 0;
+                const bIncomplete = b.progress < 100 ? 1 : 0;
+                if (aIncomplete !== bIncomplete) return bIncomplete - aIncomplete;
+                
+                // Second priority: courses with progress (started but not complete)
+                const aHasProgress = a.progress > 0 && a.progress < 100 ? 1 : 0;
+                const bHasProgress = b.progress > 0 && b.progress < 100 ? 1 : 0;
+                if (aHasProgress !== bHasProgress) return bHasProgress - aHasProgress;
+                
+                // Third priority: last visited (most recent first)
+                const aDate = new Date(a.lastVisited || a.enrolledAt || 0);
+                const bDate = new Date(b.lastVisited || b.enrolledAt || 0);
+                return bDate - aDate;
+              })
+              .slice(0, 3)
+              .map((course) => (
               <div
                 key={course._id}
                 className="bg-linear-to-br from-[#1E1E2E] to-[#2B2B40] p-5 rounded-3xl border border-gray-800/50 hover:border-purple-500/50 transition-all duration-300 group hover:shadow-2xl hover:shadow-purple-900/30 hover:-translate-y-2"
@@ -211,138 +308,321 @@ const DashboardHome = ({ user }) => {
 
       {/* 3. PERFORMANCE & CALENDAR ROW */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Performance Graph */}
-        <div className="lg:col-span-2 bg-linear-to-br from-[#1E1E2E] to-[#2B2B40] p-6 rounded-3xl border border-gray-800/50 shadow-xl hover:shadow-2xl hover:shadow-purple-900/20 transition-all duration-300">
-          <div className="flex justify-between items-center mb-6">
-            <div>
-              <h3 className="font-bold text-white text-lg">
-                Course Performance
-              </h3>
-              <p className="text-gray-400 text-xs mt-1">
-                Track your progress across courses
-              </p>
-            </div>
-            <select className="bg-[#2B2B40] text-xs px-4 py-2 rounded-lg outline-none border border-gray-700 text-white hover:border-purple-500 transition-colors cursor-pointer">
-              <option>All Courses</option>
-            </select>
-          </div>
-          {coursePerformance.length === 0 ? (
-            <div className="text-center py-16 bg-[#1E1E2E] rounded-2xl border border-dashed border-gray-700">
-              <div className="text-5xl mb-3">📊</div>
-              <p className="text-gray-400">No course data available</p>
-              <p className="text-gray-500 text-sm mt-1">
-                Enroll in courses to see performance
-              </p>
-            </div>
-          ) : (
-            <>
-              <div className="flex items-end justify-between h-52 gap-3 px-2 mb-2">
-                {coursePerformance.map((data, i) => (
-                  <div
-                    key={i}
-                    className="flex-1 rounded-t-xl h-full relative group flex flex-col justify-end items-center overflow-hidden"
-                  >
-                    {/* Background bar */}
-                    <div className="absolute bottom-0 w-full h-full bg-linear-to-t from-[#2B2B40] to-[#1E1E2E] rounded-t-xl border-t-2 border-gray-700"></div>
-
-                    {/* Progress percentage at top */}
-                    <div className="absolute -top-7 text-xs font-bold text-purple-400 group-hover:text-purple-300 transition-colors z-10 bg-[#1E1E2E] px-2 py-1 rounded-lg border border-purple-500/30">
-                      {Math.round(data.progress)}%
-                    </div>
-
-                    {/* Colored progress bar with animation */}
-                    <div
-                      style={{ height: `${data.progress}%` }}
-                      className="w-full bg-linear-to-t from-purple-600 via-purple-500 to-pink-500 rounded-t-xl transition-all duration-700 ease-out relative z-10 group-hover:from-purple-500 group-hover:via-purple-400 group-hover:to-pink-400 shadow-lg shadow-purple-500/50"
-                    >
-                      {/* Shine effect */}
-                      <div className="absolute inset-0 bg-linear-to-t from-transparent via-white/10 to-transparent group-hover:via-white/20 transition-all"></div>
-                    </div>
+        {/* Performance Graph - Enhanced Professional Design */}
+        <div className="lg:col-span-2 bg-linear-to-br from-[#1E1E2E] via-[#252535] to-[#1E1E2E] p-8 rounded-3xl border border-purple-500/20 shadow-2xl shadow-purple-900/30 hover:shadow-purple-800/40 transition-all duration-300 relative overflow-hidden">
+          {/* Decorative background elements */}
+          <div className="absolute top-0 right-0 w-64 h-64 bg-purple-600/10 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-0 left-0 w-48 h-48 bg-pink-600/10 rounded-full blur-3xl"></div>
+          
+          <div className="relative z-10">
+            <div className="flex justify-between items-center mb-8">
+              <div>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-linear-to-br from-purple-600 to-pink-600 rounded-xl flex items-center justify-center shadow-lg">
+                    <span className="text-xl">📊</span>
                   </div>
-                ))}
-              </div>
-              <div className="flex justify-between gap-3 mt-8 px-2">
-                {coursePerformance.map((data, i) => (
-                  <div key={i} className="flex-1 text-center">
-                    <p
-                      className="text-[9px] text-gray-400 leading-tight line-clamp-2 group-hover:text-purple-400 transition-colors font-medium"
-                      style={{
-                        writingMode: "vertical-rl",
-                        textOrientation: "mixed",
-                        height: "65px",
-                        margin: "0 auto",
-                      }}
-                    >
-                      {data.shortName}
+                  <div>
+                    <h3 className="font-extrabold text-white text-xl bg-linear-to-r from-white to-gray-300 bg-clip-text text-transparent">
+                      Course Performance
+                    </h3>
+                    <p className="text-gray-400 text-xs mt-0.5">
+                      Track your learning journey and achievements
                     </p>
                   </div>
-                ))}
+                </div>
               </div>
-            </>
-          )}
-        </div>
-
-        {/* Linked Tutors */}
-        <div className="bg-linear-to-br from-[#1E1E2E] to-[#2B2B40] p-6 rounded-3xl border border-gray-800/50 shadow-xl hover:shadow-2xl hover:shadow-purple-900/20 transition-all duration-300">
-          <div className="mb-4">
-            <h3 className="font-bold text-white text-lg">Your Tutors</h3>
-            <p className="text-gray-400 text-xs mt-1">Connected instructors</p>
-          </div>
-          <div className="space-y-3">
-            {activeCourses.length === 0 ? (
-              <div className="text-center py-8 bg-[#1E1E2E] rounded-2xl border border-dashed border-gray-700">
-                <div className="text-4xl mb-2">👨‍🏫</div>
-                <p className="text-gray-400 text-sm">No tutors yet</p>
+              <div className="flex items-center gap-3">
+                <div className="text-right mr-2">
+                  <p className="text-2xl font-black text-white">
+                    {coursePerformance.length > 0 
+                      ? Math.round(coursePerformance.reduce((acc, c) => acc + c.progress, 0) / coursePerformance.length)
+                      : 0}%
+                  </p>
+                  <p className="text-[10px] text-gray-400 font-semibold">Avg Progress</p>
+                </div>
+                <select className="bg-[#2B2B40] text-xs px-4 py-2.5 rounded-xl outline-none border border-gray-700/50 text-white  cursor-pointer font-semibold">
+                  <option>All Time</option>
+                  <option>This Week</option>
+                  <option>This Month</option>
+                </select>
+              </div>
+            </div>
+            
+            {coursePerformance.length === 0 ? (
+              <div className="text-center py-20 bg-[#1E1E2E]/50 rounded-2xl border border-dashed border-gray-700/50 backdrop-blur-sm">
+                <div className="text-6xl mb-4">📊</div>
+                <p className="text-gray-300 text-lg font-semibold">No course data available</p>
+                <p className="text-gray-500 text-sm mt-2">
+                  Enroll in courses to see your performance metrics
+                </p>
               </div>
             ) : (
-              (() => {
-                // Deduplicate tutors by tutor ID
-                const uniqueTutors = [];
-                const seenTutorIds = new Set();
-
-                activeCourses.forEach((course) => {
-                  const tutorId = course.tutor?._id;
-                  if (tutorId && !seenTutorIds.has(tutorId)) {
-                    seenTutorIds.add(tutorId);
-                    uniqueTutors.push(course);
-                  }
-                });
-
-                return uniqueTutors.slice(0, 3).map((course) => (
-                  <div
-                    key={course._id}
-                    className="bg-linear-to-r from-[#2B2B40] to-[#1E1E2E] p-4 rounded-2xl flex items-center gap-3 border border-gray-700/50 hover:border-purple-500/50 transition-all duration-300 group hover:shadow-lg hover:shadow-purple-500/20"
-                  >
-                    <div className="w-12 h-12 rounded-full bg-linear-to-br from-purple-600 to-pink-600 flex items-center justify-center text-white font-bold overflow-hidden shadow-lg group-hover:scale-110 transition-transform">
-                      {course.tutor?.avatar ? (
-                        <img
-                          src={course.tutor.avatar}
-                          alt={course.tutor.name}
-                          className="object-cover"
-                          sizes="48px"
-                          style={{ borderRadius: "9999px" }}
-                        />
-                      ) : (
-                        course.tutor?.name?.charAt(0).toUpperCase() || "T"
-                      )}
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-bold text-white group-hover:text-purple-400 transition-colors">
-                        {course.tutor?.name || "Tutor"}
-                      </p>
-                      <p className="text-xs text-gray-400">{course.category}</p>
-                    </div>
-                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+              <>
+                {/* Grid lines background */}
+                <div className="relative bg-[#1E1E2E]/30 rounded-2xl p-6 border border-gray-800/30 backdrop-blur-sm">
+                  {/* Horizontal grid lines */}
+                  <div className="absolute inset-x-6 top-6 bottom-20 flex flex-col justify-between pointer-events-none">
+                    {[100, 75, 50, 25, 0].map((val) => (
+                      <div key={val} className="flex items-center gap-3">
+                        <span className="text-[10px] text-gray-600 font-bold w-8 text-right">{val}%</span>
+                        <div className="flex-1 h-px bg-gray-800/50"></div>
+                      </div>
+                    ))}
                   </div>
-                ));
-              })()
+
+                  {/* Bar Chart */}
+                  <div className="flex items-end justify-around h-56 gap-6 px-12 pt-4 relative z-10">
+                    {coursePerformance.map((data, i) => {
+                      // Dynamic color and styling based on progress
+                      const getBarStyles = (progress) => {
+                        if (progress >= 75) return {
+                          gradient: 'from-emerald-500 via-green-500 to-teal-400',
+                          shadow: 'shadow-green-500/50',
+                          glow: 'group-hover:shadow-green-400/60',
+                          ring: 'ring-green-500/30',
+                          badge: 'from-green-600 to-emerald-600'
+                        };
+                        if (progress >= 50) return {
+                          gradient: 'from-blue-500 via-cyan-500 to-blue-400',
+                          shadow: 'shadow-blue-500/50',
+                          glow: 'group-hover:shadow-blue-400/60',
+                          ring: 'ring-blue-500/30',
+                          badge: 'from-blue-600 to-cyan-600'
+                        };
+                        if (progress >= 25) return {
+                          gradient: 'from-yellow-500 via-amber-500 to-orange-400',
+                          shadow: 'shadow-yellow-500/50',
+                          glow: 'group-hover:shadow-yellow-400/60',
+                          ring: 'ring-yellow-500/30',
+                          badge: 'from-yellow-600 to-orange-600'
+                        };
+                        return {
+                          gradient: 'from-rose-500 via-red-500 to-pink-400',
+                          shadow: 'shadow-red-500/50',
+                          glow: 'group-hover:shadow-red-400/60',
+                          ring: 'ring-red-500/30',
+                          badge: 'from-red-600 to-pink-600'
+                        };
+                      };
+                      
+                      const styles = getBarStyles(data.progress);
+                      
+                      return (
+                        <div
+                          key={i}
+                          className="flex-1 max-w-[100px] h-full relative group flex flex-col justify-end items-center cursor-pointer transform hover:-translate-y-2 transition-all duration-300"
+                        >
+                          {/* Percentage Badge */}
+                          <div className={`absolute -top-12 left-1/2 transform -translate-x-1/2 z-30 bg-linear-to-r ${styles.badge} px-4 py-2 rounded-xl border-2 border-white/20 shadow-2xl ${styles.shadow} group-hover:scale-110 group-hover:-translate-y-2 transition-all duration-300`}>
+                            <p className="text-sm font-black text-white">
+                              {Math.round(data.progress)}%
+                            </p>
+                            <div className="absolute -bottom-1.5 left-1/2 transform -translate-x-1/2 w-3 h-3 bg-inherit rotate-45 border-r-2 border-b-2 border-white/20"></div>
+                          </div>
+
+                          {/* Progress Bar */}
+                          <div
+                            style={{ 
+                              height: `${Math.max(data.progress, 8)}%`,
+                              minHeight: '32px'
+                            }}
+                            className={`w-full bg-linear-to-t ${styles.gradient} rounded-2xl transition-all duration-700 ease-out relative shadow-2xl ${styles.shadow} ${styles.glow} group-hover:scale-105 ring-4 ${styles.ring} overflow-hidden`}
+                          >
+                            {/* Animated shine effect */}
+                            <div className="absolute inset-0 bg-linear-to-t from-transparent via-white/30 to-white/40 group-hover:via-white/50 transition-all rounded-2xl"></div>
+                            {/* Sparkle effect */}
+                            <div className="absolute inset-0 bg-gradient-radial from-white/20 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                            {/* Bottom glow line */}
+                            <div className="absolute bottom-0 inset-x-0 h-1 bg-white/50 blur-sm"></div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  
+                  {/* Course Names */}
+                  <div className="flex justify-around gap-6 mt-6 px-12">
+                    {coursePerformance.map((data, i) => (
+                      <div key={i} className="flex-1 max-w-[100px] text-center group cursor-pointer">
+                        <div className="bg-[#2B2B40]/50 backdrop-blur-sm px-2 py-2 rounded-lg border border-gray-700/30 group-hover:border-purple-500/50 transition-all">
+                          <p className="text-xs text-gray-300 group-hover:text-purple-400 transition-colors font-bold truncate">
+                            {data.shortName}
+                          </p>
+                          <p className="text-[10px] text-gray-500 mt-0.5 truncate" title={data.courseName}>
+                            {data.lectureCount || 0} lessons
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Stats Summary */}
+                <div className="grid grid-cols-3 gap-4 mt-6">
+                  <div className="bg-linear-to-br from-green-600/10 to-emerald-600/5 p-4 rounded-2xl border border-green-500/20">
+                    <p className="text-2xl font-black text-green-400">
+                      {coursePerformance.filter(c => c.progress >= 75).length}
+                    </p>
+                    <p className="text-xs text-gray-400 mt-1 font-semibold">Excellent Progress</p>
+                  </div>
+                  <div className="bg-linear-to-br from-blue-600/10 to-cyan-600/5 p-4 rounded-2xl border border-blue-500/20">
+                    <p className="text-2xl font-black text-blue-400">
+                      {coursePerformance.filter(c => c.progress >= 50 && c.progress < 75).length}
+                    </p>
+                    <p className="text-xs text-gray-400 mt-1 font-semibold">On Track</p>
+                  </div>
+                  <div className="bg-linear-to-br from-yellow-600/10 to-orange-600/5 p-4 rounded-2xl border border-yellow-500/20">
+                    <p className="text-2xl font-black text-yellow-400">
+                      {coursePerformance.filter(c => c.progress < 50).length}
+                    </p>
+                    <p className="text-xs text-gray-400 mt-1 font-semibold">Needs Attention</p>
+                  </div>
+                </div>
+              </>
             )}
           </div>
-          {activeCourses.length > 0 && (
-            <button className="w-full mt-4 py-2.5 text-sm text-purple-400 hover:text-white hover:bg-purple-600/20 rounded-xl transition-all duration-300 font-semibold border border-transparent hover:border-purple-500/30">
-              View All Tutors →
-            </button>
-          )}
+        </div>
+
+        {/* Your Tutors - Enhanced Design */}
+        <div className="bg-linear-to-br from-[#1E1E2E] via-[#252535] to-[#1E1E2E] p-8 rounded-3xl border border-purple-500/20 shadow-2xl shadow-purple-900/30 hover:shadow-purple-800/40 transition-all duration-300 relative overflow-hidden">
+          {/* Decorative background elements */}
+          <div className="absolute top-0 right-0 w-48 h-48 bg-purple-600/10 rounded-full blur-3xl"></div>
+          <div className="absolute bottom-0 left-0 w-32 h-32 bg-pink-600/10 rounded-full blur-3xl"></div>
+          
+          <div className="relative z-10">
+            <div className="mb-6">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-10 h-10 bg-linear-to-br from-purple-600 to-pink-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <span className="text-xl">👨‍🏫</span>
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-white text-xl bg-linear-to-r from-white to-gray-300 bg-clip-text text-transparent">
+                    Your Tutors
+                  </h3>
+                  <p className="text-gray-400 text-xs mt-0.5">
+                    Expert instructors guiding your journey
+                  </p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="space-y-4">
+              {activeCourses.length === 0 ? (
+                <div className="text-center py-12 bg-[#1E1E2E]/50 rounded-2xl border border-dashed border-gray-700/50 backdrop-blur-sm">
+                  <div className="text-5xl mb-3">👨‍🏫</div>
+                  <p className="text-gray-300 font-semibold">No tutors yet</p>
+                  <p className="text-gray-500 text-sm mt-1">Enroll in courses to connect with expert tutors</p>
+                </div>
+              ) : (
+                (() => {
+                  // Deduplicate tutors by tutor ID
+                  const uniqueTutors = [];
+                  const seenTutorIds = new Set();
+
+                  activeCourses.forEach((course) => {
+                    const tutorId = course.tutor?._id;
+                    if (tutorId && !seenTutorIds.has(tutorId)) {
+                      seenTutorIds.add(tutorId);
+                      uniqueTutors.push(course);
+                    }
+                  });
+
+                  return uniqueTutors.slice(0, 4).map((course, index) => {
+                    const tutorRating = calculateTutorRating(course.tutor._id);
+                    const tutorStudents = countTutorStudents(course.tutor._id);
+                    
+                    return (
+                    <div
+                      key={course._id}
+                      onClick={() => handleViewTutorProfile(course.tutor._id)}
+                      className="bg-linear-to-r from-[#2B2B40]/80 via-[#252535]/60 to-[#1E1E2E]/80 p-5 rounded-2xl flex items-center gap-4 border border-gray-700/30 hover:border-purple-500/50 transition-all duration-300 group hover:shadow-2xl hover:shadow-purple-500/30 cursor-pointer transform hover:-translate-y-1 hover:scale-[1.02] backdrop-blur-sm"
+                    >
+                      {/* Tutor Avatar with ring */}
+                      <div className="relative">
+                        <div className="absolute inset-0 bg-linear-to-br from-purple-600 to-pink-600 rounded-full blur-md opacity-50 group-hover:opacity-80 transition-opacity"></div>
+                        <div className="relative w-16 h-16 rounded-full bg-linear-to-br from-purple-600 to-pink-600 flex items-center justify-center text-white font-bold overflow-hidden shadow-xl ring-4 ring-purple-500/30 group-hover:ring-purple-400/50 group-hover:scale-110 transition-all duration-300">
+                          {course.tutor?.avatar ? (
+                            <img
+                              src={course.tutor.avatar}
+                              alt={course.tutor.name}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <span className="text-2xl">
+                              {course.tutor?.name?.charAt(0).toUpperCase() || "T"}
+                            </span>
+                          )}
+                        </div>
+                        {/* Online status indicator */}
+                        <div className="absolute -bottom-0.5 -right-0.5 w-5 h-5 bg-green-500 rounded-full border-4 border-[#1E1E2E] shadow-lg">
+                          <div className="w-full h-full bg-green-400 rounded-full animate-ping opacity-75"></div>
+                        </div>
+                      </div>
+                      
+                      {/* Tutor Info */}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-base font-bold text-white group-hover:text-purple-300 transition-colors truncate">
+                          {course.tutor?.name || "Tutor"}
+                        </p>
+                        <p className="text-xs text-gray-400 group-hover:text-gray-300 transition-colors mt-0.5">
+                          {course.category}
+                        </p>
+                        <div className="flex items-center gap-2 mt-2">
+                          {tutorRating ? (
+                            <div className="flex items-center gap-1 bg-yellow-500/20 px-2 py-1 rounded-lg">
+                              <span className="text-yellow-400 text-xs">⭐</span>
+                              <span className="text-yellow-300 text-xs font-bold">
+                                {tutorRating}
+                              </span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-1 bg-gray-600/20 px-2 py-1 rounded-lg">
+                              <span className="text-gray-400 text-xs">⭐</span>
+                              <span className="text-gray-400 text-xs font-bold">
+                                New
+                              </span>
+                            </div>
+                          )}
+                          <div className="bg-purple-500/20 px-2 py-1 rounded-lg">
+                            <span className="text-purple-300 text-xs font-semibold">
+                              {tutorStudents} student{tutorStudents !== 1 ? 's' : ''}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* View Profile Arrow */}
+                      <div className="opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-x-0 group-hover:translate-x-1">
+                        <div className="w-10 h-10 bg-linear-to-br from-purple-600 to-pink-600 rounded-xl flex items-center justify-center shadow-lg">
+                          <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </div>
+                      </div>
+                    </div>
+                    );
+                  });
+                })()
+              )}
+            </div>
+            
+            {activeCourses.length > 0 && (() => {
+              const uniqueTutorCount = new Set(
+                activeCourses.map(course => course.tutor?._id).filter(Boolean)
+              ).size;
+              
+              return uniqueTutorCount > 4 && (
+                <button className="w-full mt-5 py-3.5 text-sm text-white bg-linear-to-r from-purple-600/20 to-pink-600/20 hover:from-purple-600 hover:to-pink-600 rounded-xl transition-all duration-300 font-bold border border-purple-500/30 hover:border-purple-400 hover:shadow-xl hover:shadow-purple-500/30 group">
+                  <span className="flex items-center justify-center gap-2">
+                    View All {uniqueTutorCount} Tutors
+                    <svg className="w-4 h-4 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                    </svg>
+                  </span>
+                </button>
+              );
+            })()}
+          </div>
         </div>
       </div>
     </div>

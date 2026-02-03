@@ -84,7 +84,8 @@ export const getDashboardStats = catchAsync(async (req, res) => {
   const enrollments = await Enrollment.find({ student: studentId })
     .populate({
       path: "course",
-      select: "title thumbnail category tutor sections",
+      select:
+        "title thumbnail category tutor sections rating numReviews enrolledStudents",
       populate: { path: "tutor", select: "name email avatar" },
     })
     .sort({ createdAt: -1 });
@@ -121,6 +122,9 @@ export const getDashboardStats = catchAsync(async (req, res) => {
       lectureCount,
       duration: courseDuration,
       lastAccessed: enrollment.updatedAt,
+      rating: course.rating || 0,
+      numReviews: course.numReviews || 0,
+      enrolledStudents: course.enrolledStudents || [],
     };
   });
 
@@ -144,6 +148,7 @@ export const getDashboardStats = catchAsync(async (req, res) => {
     courseName: course.title,
     progress: course.progress,
     shortName: course.title.split(" ").slice(0, 3).join(" "),
+    lectureCount: course.lectureCount,
   }));
 
   res.status(200).json({
