@@ -7,6 +7,7 @@ import { getPaymentHistory } from "@/services/apiService";
 import axios from "axios";
 import toast, { Toaster } from "react-hot-toast";
 import PaymentTimer from "../../components/student/PaymentTimer";
+import { generateInvoice } from "../../utils/invoiceGenerator";
 import {
   FiDownload,
   FiCreditCard,
@@ -26,6 +27,16 @@ export default function Payments() {
   const [totalAmount, setTotalAmount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [retryingPayment, setRetryingPayment] = useState(null);
+
+  // Handle invoice download
+  const handleDownloadInvoice = (transaction) => {
+    if (transaction.status !== "completed") {
+      toast.error("Invoice can only be downloaded for completed payments");
+      return;
+    }
+    generateInvoice(transaction, user);
+    toast.success("Invoice generated successfully!");
+  };
 
   // Load Razorpay script
   const loadRazorpayScript = () => {
@@ -395,32 +406,44 @@ export default function Payments() {
                           </span>
                         </td>
                         <td className="px-6 py-4 text-center">
-                          {["pending", "failed", "expired"].includes(
-                            item.status,
-                          ) && (
-                            <button
-                              onClick={() =>
-                                handleRetryPayment(
-                                  item._id,
-                                  item.course?.title || "Course",
-                                )
-                              }
-                              disabled={retryingPayment === item._id}
-                              className="inline-flex items-center gap-2 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white text-xs font-medium rounded-lg transition-colors"
-                            >
-                              {retryingPayment === item._id ? (
-                                <>
-                                  <div className="animate-spin rounded-full h-3 w-3 border-t-2 border-b-2 border-white"></div>
-                                  <span>Processing...</span>
-                                </>
-                              ) : (
-                                <>
-                                  <FiRefreshCw size={12} />
-                                  <span>Retry</span>
-                                </>
-                              )}
-                            </button>
-                          )}
+                          <div className="flex items-center justify-center gap-2">
+                            {item.status === "completed" && (
+                              <button
+                                onClick={() => handleDownloadInvoice(item)}
+                                className="inline-flex items-center gap-2 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-xs font-medium rounded-lg transition-colors"
+                                title="Download Invoice"
+                              >
+                                <FiDownload size={12} />
+                                <span>Invoice</span>
+                              </button>
+                            )}
+                            {["pending", "failed", "expired"].includes(
+                              item.status,
+                            ) && (
+                              <button
+                                onClick={() =>
+                                  handleRetryPayment(
+                                    item._id,
+                                    item.course?.title || "Course",
+                                  )
+                                }
+                                disabled={retryingPayment === item._id}
+                                className="inline-flex items-center gap-2 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 disabled:bg-gray-700 disabled:cursor-not-allowed text-white text-xs font-medium rounded-lg transition-colors"
+                              >
+                                {retryingPayment === item._id ? (
+                                  <>
+                                    <div className="animate-spin rounded-full h-3 w-3 border-t-2 border-b-2 border-white"></div>
+                                    <span>Processing...</span>
+                                  </>
+                                ) : (
+                                  <>
+                                    <FiRefreshCw size={12} />
+                                    <span>Retry</span>
+                                  </>
+                                )}
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     );
