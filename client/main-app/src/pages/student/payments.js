@@ -217,76 +217,136 @@ export default function Payments() {
         </div>
 
         {/* --- Payment Summary Cards --- */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {/* Card 1 - Total Spent */}
-          <div className="bg-linear-to-br from-[#6D28D9] to-[#4C1D95] p-6 rounded-3xl text-white relative overflow-hidden shadow-xl">
+          <div className="bg-gradient-to-br from-[#6D28D9] via-[#5B21B6] to-[#4C1D95] p-6 rounded-2xl text-white relative overflow-hidden shadow-2xl hover:shadow-purple-500/20 transition-all duration-300 border border-purple-500/20">
             <div className="relative z-10">
-              <p className="text-purple-200 text-sm font-medium">
-                💰 Total Spent
-              </p>
+              <div className="flex items-center gap-2 mb-3">
+                <div className="p-2 bg-white/10 rounded-lg backdrop-blur-sm">
+                  <FiCreditCard className="w-5 h-5" />
+                </div>
+                <p className="text-purple-200 text-sm font-medium">
+                  Total Spent
+                </p>
+              </div>
               {loading ? (
-                <div className="animate-pulse">
-                  <div className="h-10 bg-white/20 rounded w-32 mt-2"></div>
-                  <div className="h-6 bg-white/20 rounded w-40 mt-4"></div>
+                <div className="animate-pulse space-y-3">
+                  <div className="h-10 bg-white/20 rounded-lg w-36"></div>
+                  <div className="h-5 bg-white/20 rounded-lg w-28"></div>
                 </div>
               ) : (
                 <>
-                  <h2 className="text-4xl font-bold mt-2">
+                  <h2 className="text-4xl font-bold mb-3">
                     ₹{totalAmount.toLocaleString("en-IN")}
                   </h2>
-                  <p className="text-xs bg-white/20 inline-block px-2 py-1 rounded-md mt-4 backdrop-blur-sm">
-                    {
-                      transactions.filter((t) => t.status === "completed")
-                        .length
-                    }{" "}
-                    Courses Purchased
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <div className="px-3 py-1.5 bg-white/10 rounded-lg backdrop-blur-sm border border-white/20">
+                      <p className="text-xs font-medium">
+                        {
+                          transactions.filter((t) => t.status === "completed")
+                            .length
+                        }{" "}
+                        Courses
+                      </p>
+                    </div>
+                  </div>
                 </>
               )}
             </div>
-            <div className="absolute -right-5 -bottom-10 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
+            <div className="absolute -right-8 -bottom-8 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
+            <div className="absolute -left-4 -top-4 w-24 h-24 bg-white/5 rounded-full blur-2xl"></div>
           </div>
 
-          {/* Card 2 - Transaction Stats */}
-          <div className="bg-[#1E1E2E] p-6 rounded-3xl border border-gray-800 shadow-lg">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-[#2B2B40] rounded-xl text-white">
-                <FiCheckCircle className="w-6 h-6" />
+          {/* Card 2 - Successful Payments */}
+          <div className="bg-gradient-to-br from-[#10B981] to-[#059669] p-6 rounded-2xl text-white relative overflow-hidden shadow-2xl hover:shadow-green-500/20 transition-all duration-300 border border-green-400/20">
+            <div className="relative z-10">
+              <div className="flex items-center gap-2 mb-3">
+                <div className="p-2 bg-white/10 rounded-lg backdrop-blur-sm">
+                  <FiCheckCircle className="w-5 h-5" />
+                </div>
+                <p className="text-green-100 text-sm font-medium">
+                  Successful Payments
+                </p>
               </div>
+              {loading ? (
+                <div className="animate-pulse space-y-3">
+                  <div className="h-10 bg-white/20 rounded-lg w-24"></div>
+                  <div className="h-5 bg-white/20 rounded-lg w-32"></div>
+                </div>
+              ) : (
+                <>
+                  <h2 className="text-4xl font-bold mb-3">
+                    {
+                      transactions.filter((t) => t.status === "completed")
+                        .length
+                    }
+                  </h2>
+                  <div className="flex items-center gap-2 text-sm">
+                    <FiCheckCircle className="w-4 h-4" />
+                    <span className="text-green-100">
+                      All payments verified
+                    </span>
+                  </div>
+                </>
+              )}
+            </div>
+            <div className="absolute -right-8 -bottom-8 w-40 h-40 bg-white/10 rounded-full blur-3xl"></div>
+          </div>
+
+          {/* Card 3 - Transaction Stats */}
+          <div className="bg-[#1E1E2E] p-6 rounded-2xl border border-gray-800 shadow-xl hover:shadow-gray-800/50 transition-all duration-300">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="p-2 bg-[#2B2B40] rounded-lg">
+                <FiAlertCircle className="w-5 h-5 text-yellow-400" />
+              </div>
+              <p className="text-gray-400 text-sm font-medium">
+                Other Transactions
+              </p>
             </div>
             {loading ? (
-              <div className="animate-pulse space-y-2">
-                <div className="h-4 bg-gray-700 rounded w-32"></div>
-                <div className="h-8 bg-gray-700 rounded w-20"></div>
+              <div className="animate-pulse space-y-3">
+                <div className="h-8 bg-gray-800 rounded-lg w-20"></div>
+                <div className="h-px bg-gray-800 w-full"></div>
+                <div className="space-y-2">
+                  <div className="h-5 bg-gray-800 rounded w-24"></div>
+                  <div className="h-5 bg-gray-800 rounded w-28"></div>
+                </div>
               </div>
             ) : (
-              <div>
-                <p className="text-gray-400 text-sm">Successful Payments</p>
-                <p className="text-3xl font-bold text-white mt-1">
-                  {transactions.filter((t) => t.status === "completed").length}
-                </p>
-                <div className="mt-4 grid grid-cols-2 gap-4 pt-4 border-t border-gray-800">
-                  <div>
-                    <p className="text-xs text-gray-500">Pending</p>
-                    <p className="text-lg font-bold text-yellow-400">
+              <>
+                <h2 className="text-3xl font-bold text-white mb-4">
+                  {transactions.filter((t) => t.status !== "completed").length}
+                </h2>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-3 bg-[#2B2B40]/50 rounded-lg border border-gray-800">
+                    <div className="flex items-center gap-2">
+                      <FiClock className="w-4 h-4 text-yellow-400" />
+                      <span className="text-sm text-gray-400">Pending</span>
+                    </div>
+                    <span className="text-lg font-bold text-yellow-400">
                       {
                         transactions.filter((t) => t.status === "pending")
                           .length
                       }
-                    </p>
+                    </span>
                   </div>
-                  <div>
-                    <p className="text-xs text-gray-500">Failed/Expired</p>
-                    <p className="text-lg font-bold text-red-400">
+                  <div className="flex items-center justify-between p-3 bg-[#2B2B40]/50 rounded-lg border border-gray-800">
+                    <div className="flex items-center gap-2">
+                      <FiAlertCircle className="w-4 h-4 text-red-400" />
+                      <span className="text-sm text-gray-400">
+                        Failed/Expired
+                      </span>
+                    </div>
+                    <span className="text-lg font-bold text-red-400">
                       {
                         transactions.filter((t) =>
                           ["failed", "expired"].includes(t.status),
                         ).length
                       }
-                    </p>
+                    </span>
                   </div>
                 </div>
-              </div>
+              </>
             )}
           </div>
         </div>
@@ -308,9 +368,49 @@ export default function Payments() {
           */}
           <div className="hidden lg:block w-full overflow-x-auto">
             {loading ? (
-              <div className="p-8 flex justify-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
-              </div>
+              <table className="w-full text-left whitespace-nowrap min-w-175">
+                <thead className="bg-[#2B2B40] text-gray-400 text-xs uppercase">
+                  <tr>
+                    <th className="px-6 py-4 font-medium">Course Name</th>
+                    <th className="px-6 py-4 font-medium">Date</th>
+                    <th className="px-6 py-4 font-medium">Amount</th>
+                    <th className="px-6 py-4 font-medium">Status</th>
+                    <th className="px-6 py-4 font-medium text-right">
+                      Order ID
+                    </th>
+                    <th className="px-6 py-4 font-medium text-center">
+                      Action
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-800">
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <tr key={i} className="animate-pulse">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-12 h-12 rounded-lg bg-gray-800"></div>
+                          <div className="h-4 bg-gray-800 rounded w-40"></div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="h-3 bg-gray-800 rounded w-24"></div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="h-4 bg-gray-800 rounded w-20"></div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="h-6 bg-gray-800 rounded-full w-24"></div>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <div className="h-3 bg-gray-800 rounded w-20 ml-auto"></div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="h-8 bg-gray-800 rounded-lg w-24 mx-auto"></div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             ) : transactions.length === 0 ? (
               <div className="p-12 text-center">
                 <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gray-800 flex items-center justify-center">
@@ -456,9 +556,34 @@ export default function Payments() {
           {/* ✅ MOBILE/TABLET VIEW (Cards) */}
           <div className="lg:hidden flex flex-col gap-4 p-4">
             {loading ? (
-              <div className="p-8 flex justify-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
-              </div>
+              <>
+                {[1, 2, 3, 4].map((i) => (
+                  <div
+                    key={i}
+                    className="bg-[#141417] border border-gray-800 rounded-xl p-4 flex flex-col gap-3 animate-pulse"
+                  >
+                    {/* Thumbnail skeleton */}
+                    <div className="w-full h-32 rounded-lg bg-gray-800"></div>
+
+                    {/* Title and amount skeleton */}
+                    <div className="flex justify-between items-start gap-3">
+                      <div className="flex-1 min-w-0 space-y-2">
+                        <div className="h-4 bg-gray-800 rounded w-3/4"></div>
+                        <div className="h-3 bg-gray-800 rounded w-1/2"></div>
+                      </div>
+                      <div className="h-5 bg-gray-800 rounded w-20"></div>
+                    </div>
+
+                    <div className="h-px bg-gray-800/50 w-full" />
+
+                    {/* Status and order ID skeleton */}
+                    <div className="flex items-center justify-between">
+                      <div className="h-6 bg-gray-800 rounded-full w-24"></div>
+                      <div className="h-3 bg-gray-800 rounded w-16"></div>
+                    </div>
+                  </div>
+                ))}
+              </>
             ) : transactions.length === 0 ? (
               <div className="p-12 text-center">
                 <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-gray-800 flex items-center justify-center">
