@@ -52,17 +52,18 @@ export const createEnrollment = catchAsync(async (req, res, next) => {
     student: req.user._id,
     course: courseId,
     enrolledAt: Date.now(),
-    progress: {
-      completedLectures: [],
-      lastActiveAt: Date.now(),
-    },
+    progress: [], // Empty array initially
+    completionPercentage: 0,
   });
 
-  // Optionally update course student count
-  // await Course.findByIdAndUpdate(courseId, { $inc: { enrolledStudents: 1 } });
+  // Update course enrolled students count
+  await Course.findByIdAndUpdate(courseId, {
+    $addToSet: { enrolledStudents: req.user._id },
+  });
 
   res.status(201).json({
     success: true,
+    message: "Successfully enrolled in the course",
     data: { enrollment },
   });
 });

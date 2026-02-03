@@ -12,6 +12,7 @@ import {
   FiShoppingCart,
 } from "react-icons/fi";
 import axios from "axios";
+import toast, { Toaster } from "react-hot-toast";
 
 // Helper function to format duration in seconds to mm:ss
 const formatDuration = (seconds) => {
@@ -86,13 +87,10 @@ export default function CourseDetail() {
         return;
       }
       const baseURL =
-        process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
-      const response = await axios.get(
-        `${baseURL}/api/enrollments/check/${id}`,
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      );
+        process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+      const response = await axios.get(`${baseURL}/enrollments/check/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
       setEnrolled(response.data.enrolled || false);
     } catch (error) {
       console.error("Error checking enrollment:", error);
@@ -119,19 +117,28 @@ export default function CourseDetail() {
     setEnrolling(true);
     try {
       const baseURL =
-        process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
-      await axios.post(
-        `${baseURL}/api/enrollments`,
+        process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000/api";
+      const response = await axios.post(
+        `${baseURL}/enrollments`,
         { courseId: id },
         { headers: { Authorization: `Bearer ${token}` } },
       );
-      setEnrolled(true);
-      setTimeout(() => {
-        router.push(`/learn/${id}/${name}`);
-      }, 1000);
+
+      if (response.data.success) {
+        setEnrolled(true);
+        toast.success(`Successfully enrolled in ${course.title}! 🎉`, {
+          duration: 3000,
+        });
+        // Redirect to learning page
+        setTimeout(() => {
+          router.push(`/learn/${id}/${name}`);
+        }, 1500);
+      }
     } catch (error) {
       console.error("Enrollment error:", error);
-      alert(error.response?.data?.message || "Enrollment failed");
+      const errorMsg =
+        error.response?.data?.message || "Enrollment failed. Please try again.";
+      toast.error(errorMsg);
     } finally {
       setEnrolling(false);
     }
@@ -140,6 +147,7 @@ export default function CourseDetail() {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50">
+        <Toaster position="top-right" />
         <div className="flex items-center justify-center h-96">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-500 mx-auto mb-4"></div>
@@ -153,6 +161,7 @@ export default function CourseDetail() {
   if (!course) {
     return (
       <div className="min-h-screen bg-gray-50">
+        <Toaster position="top-right" />
         <div className="flex flex-col items-center justify-center h-96">
           <h2 className="text-2xl font-bold text-gray-800 mb-4">
             Course not found
@@ -171,6 +180,7 @@ export default function CourseDetail() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <Toaster position="top-right" />
       {/* Hero Section with Course Details (Udemy Style) */}
       <div className="bg-[#1c1d1f] text-white py-12">
         <div className="container mx-auto px-6 grid grid-cols-1 lg:grid-cols-3 gap-8 relative">
