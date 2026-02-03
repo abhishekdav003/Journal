@@ -2,6 +2,7 @@ import { v2 as cloudinary } from "cloudinary";
 import { CloudinaryStorage } from "multer-storage-cloudinary";
 import multer from "multer";
 import dotenv from "dotenv";
+import { logger } from "../utils/logger.js";
 
 dotenv.config();
 
@@ -70,7 +71,7 @@ const deleteFromCloudinary = async (publicId, resourceType = "video") => {
     });
     return result;
   } catch (error) {
-    console.error("Cloudinary deletion error:", error);
+    logger.error("Cloudinary deletion error:", error);
     throw error;
   }
 };

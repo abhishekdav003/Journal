@@ -5,6 +5,7 @@ import { generateToken } from "../utils/jwt.js";
 import { AppError } from "../utils/appError.js";
 import { catchAsync } from "../utils/catchAsync.js";
 import { deleteFromCloudinary } from "../config/cloudinary.js";
+import { logger } from "../utils/logger.js";
 
 // @desc    Register user (student or tutor)
 // @route   POST /api/auth/register
@@ -136,12 +137,14 @@ export const forgotPassword = catchAsync(async (req, res, next) => {
   // Create reset URL
   const resetURL = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
 
-  // TODO: Send email with resetURL
-  console.log("Password Reset URL:", resetURL);
-
+  // TODO: Implement email service to send reset link
+  // For now, return the reset token in response (DEVELOPMENT ONLY)
+  // In production, this should only send email and return success message
+  
   res.status(200).json({
     success: true,
     message: "Password reset link sent to email",
+    ...(process.env.NODE_ENV === "development" && { resetToken }) // Only in dev
   });
 });
 
@@ -211,9 +214,9 @@ export const uploadAvatar = catchAsync(async (req, res, next) => {
     try {
       await deleteFromCloudinary(user.avatarPublicId, "image");
     } catch (err) {
-      console.error(
+      logger.error(
         "Failed to delete previous avatar from Cloudinary:",
-        err.message || err,
+        err
       );
       // continue without failing the request
     }

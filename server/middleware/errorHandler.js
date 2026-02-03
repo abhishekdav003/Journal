@@ -1,4 +1,5 @@
 import { AppError } from "../utils/appError.js";
+import { logger } from "../utils/logger.js";
 
 // Handle specific error types
 const handleCastError = (err) => {
@@ -45,7 +46,7 @@ const sendErrorProd = (err, res) => {
   }
   // Programming or unknown errors: don't leak details
   else {
-    console.error("ERROR 💥", err);
+    logger.error("Unhandled Error:", err);
 
     res.status(500).json({
       success: false,

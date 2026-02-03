@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { logger } from "../utils/logger.js";
 
 const connectDB = async () => {
   try {
@@ -6,20 +7,20 @@ const connectDB = async () => {
       serverSelectionTimeoutMS: 5000,
     });
 
-    console.log(`MongoDB Connected: ${conn.connection.host}`);
+    logger.info(`MongoDB Connected: ${conn.connection.host}`);
   } catch (error) {
-    console.error(`Error: ${error.message}`);
+    logger.error(`MongoDB Connection Error: ${error.message}`, error);
     process.exit(1);
   }
 };
 
 // Handle connection events
 mongoose.connection.on("disconnected", () => {
-  console.log("MongoDB disconnected");
+  logger.warn("MongoDB disconnected");
 });
 
 mongoose.connection.on("error", (err) => {
-  console.error(`MongoDB connection error: ${err}`);
+  logger.error(`MongoDB connection error: ${err}`, err);
 });
 
 export default connectDB;
