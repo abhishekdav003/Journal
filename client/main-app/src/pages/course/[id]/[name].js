@@ -70,6 +70,7 @@ export default function CourseDetail() {
         courseData.modules.forEach((module) => {
           if (module.lectures && Array.isArray(module.lectures)) {
             module.lectures.forEach((lecture) => {
+              console.log("Lecture duration:", lecture.title, lecture.duration);
               totalDuration += lecture.duration || 0;
               totalLectures += 1;
             });
@@ -77,6 +78,7 @@ export default function CourseDetail() {
         });
       }
 
+      console.log("Total calculated duration:", totalDuration);
       courseData.calculatedTotalDuration = totalDuration;
       courseData.calculatedTotalLectures = totalLectures;
 

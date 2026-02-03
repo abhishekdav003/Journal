@@ -10,13 +10,27 @@ export const uploadVideo = catchAsync(async (req, res, next) => {
     return next(new AppError("Please upload a video file", 400));
   }
 
+  // Fetch video details from Cloudinary to get duration
+  let duration = 0;
+  try {
+    const result = await cloudinary.api.resource(req.file.filename, {
+      resource_type: "video",
+    });
+    duration = result.duration || 0;
+    console.log("Cloudinary video duration:", duration);
+  } catch (error) {
+    console.error("Error fetching video details:", error);
+  }
+
   const videoData = {
     url: req.file.path,
     publicId: req.file.filename,
-    duration: req.file.duration || 0,
+    duration: duration,
     format: req.file.format,
     size: req.file.bytes,
   };
+
+  console.log("Video uploaded with duration:", duration);
 
   res.status(200).json({
     success: true,

@@ -147,12 +147,29 @@ courseSchema.index({ title: "text", description: "text" });
 
 // Calculate total duration
 courseSchema.pre("save", function (next) {
-  if (this.isModified("lectures")) {
-    this.totalDuration = this.lectures.reduce(
-      (total, lecture) => total + lecture.duration,
+  let total = 0;
+
+  // Calculate from lectures array
+  if (this.lectures && this.lectures.length > 0) {
+    total += this.lectures.reduce(
+      (sum, lecture) => sum + (lecture.duration || 0),
       0,
     );
   }
+
+  // Calculate from modules
+  if (this.modules && this.modules.length > 0) {
+    this.modules.forEach((module) => {
+      if (module.lectures && module.lectures.length > 0) {
+        total += module.lectures.reduce(
+          (sum, lecture) => sum + (lecture.duration || 0),
+          0,
+        );
+      }
+    });
+  }
+
+  this.totalDuration = total;
   next();
 });
 
