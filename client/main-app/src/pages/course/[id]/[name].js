@@ -14,12 +14,20 @@ import {
 import axios from "axios";
 import toast, { Toaster } from "react-hot-toast";
 
-// Helper function to format duration in seconds to mm:ss
+// Helper function to format duration in seconds to h m s
 const formatDuration = (seconds) => {
-  if (!seconds || seconds <= 0) return "0:00";
-  const mins = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-  return `${mins}:${secs.toString().padStart(2, "0")}`;
+  if (!seconds || seconds <= 0) return "0s";
+
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const secs = Math.floor(seconds % 60);
+
+  const parts = [];
+  if (hours > 0) parts.push(`${hours}h`);
+  if (minutes > 0) parts.push(`${minutes}m`);
+  if (secs > 0 || parts.length === 0) parts.push(`${secs}s`);
+
+  return parts.join(" ");
 };
 
 export default function CourseDetail() {
@@ -297,11 +305,7 @@ export default function CourseDetail() {
               <div className="text-sm text-gray-600 mb-4">
                 {course.modules?.length || 0} sections •{" "}
                 {course.calculatedTotalLectures || 0} lectures •{" "}
-                {Math.floor((course.calculatedTotalDuration || 0) / 3600)}h{" "}
-                {Math.floor(
-                  ((course.calculatedTotalDuration || 0) % 3600) / 60,
-                )}
-                m total length
+                {formatDuration(course.calculatedTotalDuration)} total length
               </div>
               <div className="border border-gray-200 rounded-lg divide-y divide-gray-200">
                 {course.modules && course.modules.length > 0 ? (

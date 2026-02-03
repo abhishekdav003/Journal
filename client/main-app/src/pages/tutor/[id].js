@@ -65,6 +65,22 @@ export default function TutorProfile() {
     return (totalRating / ratedCourses.length).toFixed(1);
   };
 
+  // Format duration in hours, minutes, seconds
+  const formatDuration = (seconds) => {
+    if (!seconds) return "0h 0m 0s";
+
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = Math.floor(seconds % 60);
+
+    const parts = [];
+    if (hours > 0) parts.push(`${hours}h`);
+    if (minutes > 0) parts.push(`${minutes}m`);
+    if (secs > 0 || parts.length === 0) parts.push(`${secs}s`);
+
+    return parts.join(" ");
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-linear-to-br from-slate-950 via-purple-900 to-slate-950 flex items-center justify-center">
@@ -239,11 +255,7 @@ export default function TutorProfile() {
                         </div>
                         <div className="flex items-center gap-1.5">
                           <FaClock className="text-purple-400" />
-                          <span>
-                            {course.totalDuration
-                              ? `${Math.floor(course.totalDuration / 3600)}h ${Math.floor((course.totalDuration % 3600) / 60)}m`
-                              : "0h 0m"}
-                          </span>
+                          <span>{formatDuration(course.totalDuration)}</span>
                         </div>
                       </div>
 

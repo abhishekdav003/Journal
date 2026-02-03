@@ -67,6 +67,22 @@ const DashboardHome = ({ user }) => {
     return totalStudents;
   };
 
+  // Format duration in hours, minutes, seconds
+  const formatDuration = (seconds) => {
+    if (!seconds) return "0s";
+    
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = Math.floor(seconds % 60);
+    
+    const parts = [];
+    if (hours > 0) parts.push(`${hours}h`);
+    if (minutes > 0) parts.push(`${minutes}m`);
+    if (secs > 0 || parts.length === 0) parts.push(`${secs}s`);
+    
+    return parts.join(" ");
+  };
+
   if (loading) {
     return (
       <div className="space-y-6 animate-pulse">
@@ -281,9 +297,7 @@ const DashboardHome = ({ user }) => {
                   </span>
                   <span className="flex items-center gap-1.5 bg-[#2B2B40] px-3 py-1.5 rounded-lg border border-gray-700/50">
                     <FiClock className="text-pink-400" />{" "}
-                    {course.duration
-                      ? `${Math.round(course.duration / 60)}h`
-                      : "0h"}
+                    {formatDuration(course.duration)}
                   </span>
                 </div>
 
@@ -340,7 +354,7 @@ const DashboardHome = ({ user }) => {
                   </p>
                   <p className="text-[10px] text-gray-400 font-semibold">Avg Progress</p>
                 </div>
-                <select className="bg-[#2B2B40] text-xs px-4 py-2.5 rounded-xl outline-none border border-gray-700/50 text-white  cursor-pointer font-semibold">
+                <select className="bg-[#2B2B40] text-xs px-4 py-2.5 rounded-xl outline-none border border-gray-700/50 text-white hover:border-purple-500 hover:shadow-lg hover:shadow-purple-500/20 transition-all cursor-pointer font-semibold">
                   <option>All Time</option>
                   <option>This Week</option>
                   <option>This Month</option>
