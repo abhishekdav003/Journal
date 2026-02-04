@@ -1,3 +1,4 @@
+/* eslint-disable @next/next/no-img-element */
 import { useRouter } from "next/router";
 import { useState, useEffect } from "react";
 import { getPlatformStats } from "@/services/apiService";
@@ -32,7 +33,7 @@ export default function Hero() {
   };
 
   return (
-    <section className="relative bg-linear-to-br from-purple-900 via-purple-800 to-indigo-900 min-h-[90vh] flex items-center overflow-hidden">
+    <section className="relative bg-transparent min-h-[90vh] flex items-center overflow-hidden">
       {/* Decorative Elements */}
       <div className="absolute top-20 right-20 w-72 h-72 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse"></div>
       <div className="absolute bottom-20 left-20 w-96 h-96 bg-pink-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-pulse delay-1000"></div>
@@ -104,32 +105,17 @@ export default function Hero() {
 
           {/* Right Illustration */}
           <div className="relative hidden lg:block">
-            <div className="relative bg-white/10 backdrop-blur-lg rounded-3xl p-8 border border-white/20 shadow-2xl">
-              <div className="aspect-video bg-linear-to-br from-purple-600 to-pink-600 rounded-2xl flex items-center justify-center mb-6">
-                <FiBook className="text-white text-9xl opacity-30" />
-              </div>
+            <div className="relative">
+              <img
+                src="./images/Hero.svg"
+                alt="Hero Illustration"
+                className="w-full h-auto rounded-2xl"
+              />
+              {/* Decorative Glow */}
+              <div className="absolute -top-10 -right-10 w-32 h-32 bg-pink-500 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse"></div>
+              <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse delay-1000"></div>
 
-              {/* Feature Cards */}
-              <div className="grid grid-cols-2 gap-4">
-                <div className="bg-white/10 backdrop-blur rounded-lg p-4 border border-white/20">
-                  <FiPlayCircle className="text-purple-300 text-2xl mb-2" />
-                  <p className="text-white text-sm font-bold">
-                    Learn at Your Pace
-                  </p>
-                </div>
-                <div className="bg-white/10 backdrop-blur rounded-lg p-4 border border-white/20">
-                  <FiAward className="text-yellow-300 text-2xl mb-2" />
-                  <p className="text-white text-sm font-bold">Get Certified</p>
-                </div>
-                <div className="bg-white/10 backdrop-blur rounded-lg p-4 border border-white/20">
-                  <FiUsers className="text-blue-300 text-2xl mb-2" />
-                  <p className="text-white text-sm font-bold">Expert Tutors</p>
-                </div>
-                <div className="bg-white/10 backdrop-blur rounded-lg p-4 border border-white/20">
-                  <FiBook className="text-green-300 text-2xl mb-2" />
-                  <p className="text-white text-sm font-bold">Rich Content</p>
-                </div>
-              </div>
+  
             </div>
           </div>
         </div>
