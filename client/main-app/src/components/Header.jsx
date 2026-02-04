@@ -128,14 +128,7 @@ export default function Header() {
   return (
     // FIX 1: Removed 'overflow-hidden' form header tag.
     // Added 'z-50' to keep header on top.
-    <header className="w-full bg-linear-to-r from-[#1E1E2E] via-[#2B2B40] to-[#1E1E2E] shadow-xl border-b border-gray-800 font-sans relative z-50">
-      {/* FIX 2: Moved Background decorations into a separate absolute div with overflow-hidden.
-          This keeps the blobs inside the header area without cutting off the dropdowns. */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5"></div>
-        <div className="absolute -right-20 -top-10 w-64 h-64 bg-purple-600/10 rounded-full blur-3xl"></div>
-        <div className="absolute -left-20 -bottom-10 w-64 h-64 bg-blue-600/10 rounded-full blur-3xl"></div>
-      </div>
+    <header className="w-full bg-transparent font-sans relative z-50">
 
       <div className="max-w-7xl mx-auto px-4 md:px-6 h-16 flex justify-between items-center relative z-10">
         {/* --- LEFT: LOGO --- */}
