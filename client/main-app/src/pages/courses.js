@@ -109,12 +109,8 @@ export default function CoursesPage() {
 
   return (
     <>
-      <div className="min-h-screen bg-[#0F0F0F]">
-        {/* Hero Header - Compact like Udemy */}
-        <div className="relative bg-linear-to-br from-[#1E1E2E] via-[#2B2B40] to-[#1E1E2E] text-white py-12 overflow-hidden border-b border-gray-800">
-          {/* Decorative blur circles */}
-          <div className="absolute -top-10 -right-10 w-64 h-64 bg-purple-500/10 rounded-full blur-3xl"></div>
-          <div className="absolute -bottom-10 -left-10 w-64 h-64 bg-pink-500/10 rounded-full blur-3xl"></div>
+      <div className="min-h-screen bg-transparent">
+        <div className="relative text-white py-12 overflow-hidden ">
 
           <div className="relative container mx-auto px-6 lg:px-20">
             <h1 className="text-3xl lg:text-4xl font-bold mb-6">
@@ -139,7 +135,6 @@ export default function CoursesPage() {
         </div>
 
         <div className="container mx-auto px-6 lg:px-20 py-8">
-          {/* Horizontal Filters - Udemy Style */}
           <div className="mb-6">
             <div className="flex flex-wrap items-center gap-3">
               {/* All Filters Button */}
