@@ -77,9 +77,9 @@ export default function CartPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0F0F0F]">
+    <div className="min-h-screen bg-transparent">
       {/* Header */}
-      <div className="bg-linear-to-br from-[#1E1E2E] via-[#2B2B40] to-[#1E1E2E] text-white py-12 border-b border-gray-800">
+      <div className="text-white py-12 border-b border-gray-800">
         <div className="container mx-auto px-6 lg:px-20">
           <div className="flex items-center gap-3 mb-4">
             <FiShoppingCart className="text-4xl text-purple-400" />
