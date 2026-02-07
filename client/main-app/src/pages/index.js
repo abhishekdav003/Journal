@@ -100,16 +100,13 @@ export default function Home() {
       <Hero />
 
       {/* How it Works Section */}
-      <section className="py-20 bg-gray-50">
+      <section className="py-20 ">
         <div className="container mx-auto px-6 lg:px-20">
-          <h2 className="text-4xl lg:text-5xl font-extrabold text-center mb-16 text-gray-900">
-            How it{" "}
-            <span className="text-transparent bg-clip-text bg-linear-to-r from-purple-600 to-pink-600">
-              Works
-            </span>
+          <h2 className="text-4xl lg:text-5xl font-extrabold text-center mb-16 text-gray-100">
+            How it Works
           </h2>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 border border-gray-100 rounded-2xl p-10">
             {[
               {
                 title: "Set Your Plan",
@@ -157,26 +154,24 @@ export default function Home() {
       </section>
 
       {/* Access Section */}
-      <section className="py-20 bg-white">
+      <section className="py-20 ">
         <div className="container mx-auto px-6 lg:px-20">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             {/* Illustration */}
             <div className="relative">
-              <div className="relative bg-linear-to-br from-purple-600 to-pink-600 rounded-3xl p-12 aspect-square flex items-center justify-center">
-                <FiBook className="text-white text-9xl opacity-40" />
-              </div>
+              <img
+                src="./images/Home-Section.svg"
+                alt="Access Illustration"
+                className="w-full h-auto"
+              />
             </div>
 
             {/* Content */}
             <div className="space-y-6">
-              <h2 className="text-4xl lg:text-5xl font-extrabold text-gray-900 leading-tight">
-                Access to{" "}
-                <span className="text-transparent bg-clip-text bg-linear-to-r from-purple-600 to-pink-600">
-                  everything
-                </span>{" "}
-                for everyone
+              <h2 className="text-4xl lg:text-5xl font-extrabold text-gray-100 leading-tight">
+                Access to everything for everyone
               </h2>
-              <p className="text-gray-600 text-lg leading-relaxed">
+              <p className="text-gray-300 text-lg leading-relaxed">
                 Easy secure access to digital learning resources should be the
                 status of modern education.
               </p>
@@ -190,10 +185,10 @@ export default function Home() {
                 ].map((item, index) => (
                   <div
                     key={index}
-                    className="flex items-center gap-3 bg-gray-50 p-4 rounded-xl"
+                    className="flex items-center gap-3 bg-gray-500 p-4 rounded-xl"
                   >
                     <span className="text-2xl">{item.icon}</span>
-                    <span className="font-bold text-gray-900">{item.text}</span>
+                    <span className="font-bold text-gray-100">{item.text}</span>
                   </div>
                 ))}
               </div>
@@ -210,7 +205,7 @@ export default function Home() {
       </section>
 
       {/* Trending Courses Section */}
-      <section id="courses" className="py-20 bg-gray-50">
+      <section id="courses" className="py-20">
         <div className="container mx-auto px-6 lg:px-20">
           {/* Section Header */}
           <div className="flex items-center justify-between mb-12 flex-wrap gap-4">
@@ -277,7 +272,7 @@ export default function Home() {
       </section>
 
       {/* Reviews Section */}
-      <section className="py-20 bg-linear-to-br from-purple-900 via-purple-800 to-indigo-900 text-white">
+      <section className="py-20 text-white">
         <div className="container mx-auto px-6 lg:px-20">
           <div className="text-center mb-12">
             <h2 className="text-4xl lg:text-5xl font-extrabold mb-4">
