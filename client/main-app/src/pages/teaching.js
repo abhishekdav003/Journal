@@ -91,13 +91,13 @@ export default function Teaching() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#0F0F0F]">
+    <div className="min-h-screen">
       {/* Hero Section */}
       <section className="relative py-20 px-4 sm:px-6 lg:px-8 overflow-hidden">
         {/* Background Effects */}
         <div className="absolute inset-0">
-          <div className="absolute top-0 left-1/4 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl"></div>
-          <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-pink-500/20 rounded-full blur-3xl"></div>
+          <div className="absolute top-0 left-1/4 w-96 h-96"></div>
+          <div className="absolute bottom-0 right-1/4 w-96 h-96blur-3xl"></div>
         </div>
 
         <div className="relative max-w-7xl mx-auto">
@@ -135,7 +135,7 @@ export default function Teaching() {
 
       {/* Stats Section - Only show if data available */}
       {!loading && stats && (
-        <section className="py-16 px-4 sm:px-6 lg:px-8 bg-linear-to-b from-[#1E1E2E] to-[#0F0F0F]">
+        <section className="py-16 px-4 sm:px-6 lg:px-8">
           <div className="max-w-7xl mx-auto">
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
               <div className="text-center p-6 bg-[#0F0F0F]/50 border border-gray-800 rounded-2xl hover:border-purple-500/30 transition-all">
@@ -207,7 +207,7 @@ export default function Teaching() {
       </section>
 
       {/* Benefits Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-linear-to-b from-[#1E1E2E] to-[#0F0F0F]">
+      <section className="py-20 px-4 sm:px-6 lg:px-8 ">
         <div className="max-w-7xl mx-auto">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div>
@@ -289,15 +289,15 @@ export default function Teaching() {
       {/* CTA Section */}
       <section className="py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-4xl mx-auto text-center">
-          <div className="bg-linear-to-r from-purple-600 to-pink-600 p-12 rounded-3xl relative overflow-hidden">
+          <div className=" p-12 rounded-3xl relative overflow-hidden">
             <div className="absolute inset-0 bg-black/20"></div>
             <div className="relative z-10">
               <h2 className="text-4xl font-bold text-white mb-4">
                 Ready to Start Teaching?
               </h2>
               <p className="text-purple-100 text-lg mb-8">
-                Join our community of educators and start sharing your knowledge
-                today. It's free to get started!
+                {"Join our community of educators and start sharing your knowledge"}
+                {"today. It's free to get started!"}
               </p>
               <button
                 onClick={() => router.push("/auth/tutor?tab=register")}
