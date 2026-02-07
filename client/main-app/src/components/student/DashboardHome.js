@@ -424,7 +424,7 @@ const DashboardHome = ({ user }) => {
                       return (
                         <div
                           key={i}
-                          className="flex-1 max-w-[100px] h-full relative group flex flex-col justify-end items-center cursor-pointer transform hover:-translate-y-2 transition-all duration-300"
+                          className="flex-1 max-w-25 h-full relative group flex flex-col justify-end items-center cursor-pointer transform hover:-translate-y-2 transition-all duration-300"
                         >
                           {/* Percentage Badge */}
                           <div className={`absolute -top-12 left-1/2 transform -translate-x-1/2 z-30 bg-linear-to-r ${styles.badge} px-4 py-2 rounded-xl border-2 border-white/20 shadow-2xl ${styles.shadow} group-hover:scale-110 group-hover:-translate-y-2 transition-all duration-300`}>
@@ -457,7 +457,7 @@ const DashboardHome = ({ user }) => {
                   {/* Course Names */}
                   <div className="flex justify-around gap-6 mt-6 px-12">
                     {coursePerformance.map((data, i) => (
-                      <div key={i} className="flex-1 max-w-[100px] text-center group cursor-pointer">
+                      <div key={i} className="flex-1 max-w-25 text-center group cursor-pointer">
                         <div className="bg-[#2B2B40]/50 backdrop-blur-sm px-2 py-2 rounded-lg border border-gray-700/30 group-hover:border-purple-500/50 transition-all">
                           <p className="text-xs text-gray-300 group-hover:text-purple-400 transition-colors font-bold truncate">
                             {data.shortName}
