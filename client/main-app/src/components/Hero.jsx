@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/immutability */
 /* eslint-disable @next/next/no-img-element */
 import { useRouter } from "next/router";
 import { useState, useEffect } from "react";
@@ -49,16 +50,16 @@ export default function Hero() {
               </span>
             </div>
 
-            <h1 className="text-5xl lg:text-7xl font-extrabold leading-tight">
-              <span className="text-white">Effectiveness</span>
+            <h1 className="font-extrabold leading-tight">
+              <span className="text-[#AD2BF8] text-5xl lg:text-7xl">Effectiveness</span>
               <br />
-              <span className="text-transparent bg-clip-text bg-linear-to-r from-purple-300 to-pink-300">
-                of the Classrooms
-              </span>{" "}
-              <span className="text-white">Now</span>
-              <br />
-              <span className="text-white">in Your</span>{" "}
-              <span className="text-transparent bg-clip-text bg-linear-to-r from-purple-300 to-pink-300">
+              <span className="text-white bg-clip-text text-4xl lg:text-[50px]">
+                of the
+              </span>
+              <span className="text-[#AD2BF8] text-4xl lg:text-[50px]">{" Classrooms "}</span>
+              <span className="text-white text-4xl lg:text-[50px]">Now{' '}</span>
+              <span className="text-white text-4xl lg:text-[50px]">in Your{" "}</span>
+              <span className="text-transparent bg-clip-text bg-[#AD2BF8] text-4xl lg:text-[50px]">
                 Hands.
               </span>
             </h1>
@@ -106,16 +107,17 @@ export default function Hero() {
           {/* Right Illustration */}
           <div className="relative hidden lg:block">
             <div className="relative">
+              <div className="absolute -top-[15%] left-[25%] h-8.75 w-8.75 rounded-full bg-[#EE6055]"></div>
+              <div className="absolute bottom-[15%] -left-[5%] h-8.75 w-8.75 rounded-full bg-[#26C553]"></div>
+              <div className="absolute top-[30%] -right-[1%] h-8.75 w-8.75 rounded-full bg-[#00A5CF]"></div>
               <img
                 src="./images/Hero.svg"
                 alt="Hero Illustration"
                 className="w-full h-auto rounded-2xl"
               />
-              {/* Decorative Glow */}
+              <div className="absolute rounded-[50px] rotate-45 -z-1 top-0 left-[50%] -translate-x-1/2 w-[333.42px] h-[346.07px] bg-linear-to-r from-[#BD73FF] to-[#362045]"></div>
               <div className="absolute -top-10 -right-10 w-32 h-32 bg-pink-500 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse"></div>
               <div className="absolute -bottom-10 -left-10 w-40 h-40 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-pulse delay-1000"></div>
-
-  
             </div>
           </div>
         </div>

@@ -26,10 +26,7 @@ const Sidebar = () => {
   const isActive = (path) => router.asPath === path;
 
   return (
-    // ✅ CHANGE 1: 'fixed' hata diya.
-    // ✅ CHANGE 2: 'min-h-screen' add kiya taaki height full rahe.
-    // ✅ CHANGE 3: 'sticky top-0' lagaya taaki scroll karte waqt wo screen par dikhe (Udemy style).
-    <aside className="sticky top-0 left-0 h-screen w-16 md:w-64 shrink-0 flex flex-col border-r border-gray-800 bg-[#181824] p-3 text-gray-400 transition-all duration-300 md:p-6">
+    <aside className="sticky top-0 left-0 min-h-screen w-16 md:w-64 shrink-0 flex flex-col bg-transparent p-3 text-gray-300 transition-all duration-300 md:p-6">
 
       <div>
         <nav className="space-y-2">

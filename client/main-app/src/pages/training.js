@@ -110,15 +110,9 @@ export default function Training() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#0F0F0F]">
+    <div className="min-h-screen">
       {/* Hero Section */}
       <section className="relative py-20 px-4 sm:px-6 lg:px-8 overflow-hidden">
-        {/* Background Effects */}
-        <div className="absolute inset-0">
-          <div className="absolute top-0 right-1/4 w-96 h-96 bg-blue-500/20 rounded-full blur-3xl"></div>
-          <div className="absolute bottom-0 left-1/4 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl"></div>
-        </div>
-
         <div className="relative max-w-7xl mx-auto">
           <div className="text-center max-w-4xl mx-auto">
             <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold mb-6">
@@ -154,7 +148,7 @@ export default function Training() {
 
       {/* Stats Section - Only show if data available */}
       {!loading && stats && (
-        <section className="py-16 px-4 sm:px-6 lg:px-8 bg-linear-to-b from-[#1E1E2E] to-[#0F0F0F]">
+        <section className="py-16 px-4 sm:px-6 lg:px-8">
           <div className="max-w-7xl mx-auto">
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-8">
               <div className="text-center p-6 bg-[#0F0F0F]/50 border border-gray-800 rounded-2xl hover:border-blue-500/30 transition-all">
@@ -238,11 +232,11 @@ export default function Training() {
       </section>
 
       {/* Features Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-linear-to-b from-[#1E1E2E] to-[#0F0F0F]">
+      <section className="py-20 px-4 sm:px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold text-white mb-4">
-              What's{" "}
+             {"What's "}
               <span className="bg-linear-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
                 Included
               </span>
@@ -315,7 +309,7 @@ export default function Training() {
               </p>
               <div className="space-y-6">
                 <div className="flex gap-4">
-                  <div className="flex-shrink-0 w-12 h-12 bg-linear-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
+                  <div className="shrink-0 w-12 h-12 bg-linear-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
                     1
                   </div>
                   <div>
@@ -323,12 +317,12 @@ export default function Training() {
                       Consultation
                     </h4>
                     <p className="text-gray-400 text-sm">
-                      We assess your team's needs and goals
+                      {"We assess your team's needs and goals"}
                     </p>
                   </div>
                 </div>
                 <div className="flex gap-4">
-                  <div className="flex-shrink-0 w-12 h-12 bg-linear-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
+                  <div className="shrink-0 w-12 h-12 bg-linear-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
                     2
                   </div>
                   <div>
@@ -341,7 +335,7 @@ export default function Training() {
                   </div>
                 </div>
                 <div className="flex gap-4">
-                  <div className="flex-shrink-0 w-12 h-12 bg-linear-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
+                  <div className="shrink-0 w-12 h-12 bg-linear-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center text-white font-bold">
                     3
                   </div>
                   <div>
@@ -376,8 +370,8 @@ export default function Training() {
                 Ready to Transform Your Team?
               </h2>
               <p className="text-blue-100 text-lg mb-8">
-                Start your training journey today and unlock your team's full
-                potential with our expert-led programs.
+                {"Start your training journey today and unlock your team's full"}
+                {" potential with our expert-led programs."}
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
                 <button

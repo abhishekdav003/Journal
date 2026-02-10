@@ -83,7 +83,7 @@ export default function TutorProfile() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-linear-to-br from-slate-950 via-purple-900 to-slate-950 flex items-center justify-center">
+      <div className="min-h-screen bg-transparent flex items-center justify-center">
         <div className="text-white text-2xl">Loading tutor profile...</div>
       </div>
     );
@@ -91,7 +91,7 @@ export default function TutorProfile() {
 
   if (error || !tutor) {
     return (
-      <div className="min-h-screen bg-linear-to-br from-slate-950 via-purple-900 to-slate-950 flex items-center justify-center">
+      <div className="min-h-screen bg-transparent flex items-center justify-center">
         <div className="text-white text-2xl">{error || "Tutor not found"}</div>
       </div>
     );
@@ -107,16 +107,10 @@ export default function TutorProfile() {
         />
       </Head>
 
-      <div className="min-h-screen bg-linear-to-br from-slate-950 via-purple-900 to-slate-950">
-        {/* Background decoration */}
-        <div className="fixed inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
-          <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-purple-700 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
-        </div>
-
+      <div className="min-h-screen bg-transparent">
         <div className="relative z-10">
           {/* Tutor Header Section */}
-          <div className="bg-linear-to-r from-purple-900/40 to-slate-900/40 border-b border-purple-500/30 backdrop-blur-xl py-12">
+          <div className="backdrop-blur-xl py-12">
             <div className="max-w-6xl mx-auto px-4">
               <div className="flex flex-col md:flex-row gap-8 items-center md:items-start">
                 {/* Avatar */}
