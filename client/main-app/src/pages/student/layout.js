@@ -7,7 +7,7 @@ const Layout = ({ children }) => {
   const displayName = user?.name || "Student";
 
   return (
-    <div className="flex min-h-screen bg-[#0F0F16] font-sans text-white">
+    <div className="flex min-h-screen bg-transparent font-sans text-white">
       {/* 1. Fixed Sidebar */}
       <Sidebar />
 
