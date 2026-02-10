@@ -26,6 +26,7 @@ import {
   FiCheckCircle,
   FiX,
   FiUploadCloud,
+  FiPlay,
 } from "react-icons/fi";
 import toast, { Toaster } from "react-hot-toast";
 import Image from "next/image";
@@ -68,6 +69,7 @@ export default function CourseEditor() {
     lectureId: null,
     message: "",
   });
+  const [videoPreview, setVideoPreview] = useState(null);
 
   useEffect(() => {
     if (id) fetchCourseData(id);
@@ -149,7 +151,7 @@ export default function CourseEditor() {
 
       const res = await uploadVideo(formData, (progressEvent) => {
         const percentCompleted = Math.round(
-          (progressEvent.loaded * 100) / progressEvent.total,
+          (progressEvent.loaded * 100) / progressEvent.total
         );
         setUploadProgress(percentCompleted);
       });
@@ -184,7 +186,7 @@ export default function CourseEditor() {
       await togglePublishCourse(id);
       setCourse((prev) => ({ ...prev, isPublished: !prev.isPublished }));
       toast.success(
-        course.isPublished ? "Course Unpublished" : "Course Published Live!",
+        course.isPublished ? "Course Unpublished" : "Course Published Live!"
       );
     } catch (err) {
       toast.error("Failed to update status");
@@ -367,16 +369,16 @@ export default function CourseEditor() {
     course.modules && course.modules.length > 0
       ? course.modules
       : course.lectures && course.lectures.length > 0
-        ? [
-            {
-              _id: "__legacy__",
-              title: "Unassigned (Old Videos)",
-              description:
-                "These videos were uploaded before sections were enabled.",
-              lectures: course.lectures,
-            },
-          ]
-        : [];
+      ? [
+          {
+            _id: "__legacy__",
+            title: "Unassigned (Old Videos)",
+            description:
+              "These videos were uploaded before sections were enabled.",
+            lectures: course.lectures,
+          },
+        ]
+      : [];
 
   return (
     <TutorLayout>
@@ -390,7 +392,11 @@ export default function CourseEditor() {
               {course.title}
             </h1>
             <span
-              className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${course.isPublished ? "bg-green-100 text-green-700" : "bg-yellow-100 text-yellow-700"}`}
+              className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
+                course.isPublished
+                  ? "bg-green-100 text-green-700"
+                  : "bg-yellow-100 text-yellow-700"
+              }`}
             >
               {course.isPublished ? "Live" : "Draft"}
             </span>
@@ -409,7 +415,11 @@ export default function CourseEditor() {
           </button>
           <button
             onClick={handleTogglePublish}
-            className={`flex-1 md:flex-none px-5 py-2.5 rounded-xl font-bold text-white shadow-lg transition transform active:scale-95 ${course.isPublished ? "bg-gray-800 hover:bg-gray-900" : "bg-purple-600 hover:bg-purple-700 shadow-purple-200"}`}
+            className={`flex-1 md:flex-none px-5 py-2.5 rounded-xl font-bold text-white shadow-lg transition transform active:scale-95 ${
+              course.isPublished
+                ? "bg-gray-800 hover:bg-gray-900"
+                : "bg-purple-600 hover:bg-purple-700 shadow-purple-200"
+            }`}
           >
             {course.isPublished ? "Unpublish" : "Publish Course"}
           </button>
@@ -477,7 +487,7 @@ export default function CourseEditor() {
                             handleEditModule(
                               module._id,
                               module.title,
-                              module.description,
+                              module.description
                             );
                           }}
                           className="p-2 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition"
@@ -540,9 +550,38 @@ export default function CourseEditor() {
                                     </p>
                                   )}
                                   {lecture.videoUrl && (
-                                    <p className="text-xs text-gray-500 mt-2 truncate">
-                                      {lecture.videoUrl}
-                                    </p>
+                                    <div className="mt-3 flex items-center gap-3">
+                                      <div
+                                        className="relative group cursor-pointer w-24 h-16 bg-gray-900 rounded-lg border border-gray-700 overflow-hidden shrink-0"
+                                        onClick={() => setVideoPreview(lecture)}
+                                      >
+                                        <div className="w-full h-full bg-gray-800 flex items-center justify-center">
+                                          <FiVideo className="text-gray-600 text-2xl" />
+                                        </div>
+                                        <div className="absolute inset-0 flex items-center justify-center bg-black/30 group-hover:bg-black/50 transition">
+                                          <FiPlay className="text-white text-xl fill-current" />
+                                        </div>
+                                      </div>
+                                      <div className="flex-1">
+                                        <p className="text-xs text-gray-600 font-medium">
+                                          {lecture.duration
+                                            ? `${Math.floor(
+                                                lecture.duration / 60
+                                              )}:${(lecture.duration % 60)
+                                                .toString()
+                                                .padStart(2, "0")}`
+                                            : "Duration unknown"}
+                                        </p>
+                                        <a
+                                          href={lecture.videoUrl}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="text-xs text-blue-600 hover:underline truncate block"
+                                        >
+                                          Watch full video
+                                        </a>
+                                      </div>
+                                    </div>
                                   )}
                                 </div>
                               </div>
@@ -551,10 +590,14 @@ export default function CourseEditor() {
                                   onClick={() =>
                                     handleTogglePreview(
                                       lecture._id,
-                                      !lecture.isPreview,
+                                      !lecture.isPreview
                                     )
                                   }
-                                  className={`px-2.5 py-1 rounded-full text-xs font-bold border transition ${lecture.isPreview ? "bg-blue-600 text-white border-blue-600" : "bg-white text-blue-600 border-blue-200 hover:bg-blue-50"}`}
+                                  className={`px-2.5 py-1 rounded-full text-xs font-bold border transition ${
+                                    lecture.isPreview
+                                      ? "bg-blue-600 text-white border-blue-600"
+                                      : "bg-white text-blue-600 border-blue-200 hover:bg-blue-50"
+                                  }`}
                                 >
                                   {lecture.isPreview
                                     ? "Preview On"
@@ -612,7 +655,10 @@ export default function CourseEditor() {
                 ))
               ) : (
                 <div className="text-center py-12 bg-gray-50 rounded-3xl border-2 border-dashed border-gray-200">
-                  <FiLayout size={24} className="text-gray-300 mx-auto mb-4" />
+                  <FiLayout
+                    size={24}
+                    className="text-gray-300 mx-auto mb-4"
+                  />
                   <h3 className="font-bold text-gray-900">No sections yet</h3>
                   <p className="text-sm text-gray-500 mt-1">
                     Create your first section to organize videos
@@ -644,7 +690,11 @@ export default function CourseEditor() {
 
               {/* Overlay with Loading State */}
               <div
-                className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${isUploadingThumb ? "opacity-100" : "opacity-0 group-hover:opacity-100"}`}
+                className={`absolute inset-0 bg-black/40 flex items-center justify-center transition-opacity ${
+                  isUploadingThumb
+                    ? "opacity-100"
+                    : "opacity-0 group-hover:opacity-100"
+                }`}
               >
                 {isUploadingThumb ? (
                   <span className="text-white text-xs font-bold flex items-center gap-2">
@@ -982,6 +1032,57 @@ export default function CourseEditor() {
               >
                 Delete
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* VIDEO PREVIEW MODAL */}
+      {videoPreview && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden">
+            <div className="flex justify-between items-center p-4 border-b border-gray-100">
+              <h3 className="text-lg font-bold text-gray-900">
+                {videoPreview.title}
+              </h3>
+              <button
+                onClick={() => setVideoPreview(null)}
+                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition"
+              >
+                <FiX size={20} />
+              </button>
+            </div>
+            <div className="bg-black aspect-video">
+              <video
+                src={videoPreview.videoUrl}
+                controls
+                autoPlay
+                className="w-full h-full"
+              />
+            </div>
+            <div className="p-4 space-y-2">
+              {videoPreview.description && (
+                <p className="text-sm text-gray-700">
+                  {videoPreview.description}
+                </p>
+              )}
+              <div className="flex gap-4 text-xs text-gray-500">
+                <span>
+                  Duration:{" "}
+                  {videoPreview.duration
+                    ? `${Math.floor(videoPreview.duration / 60)}:${(
+                        videoPreview.duration % 60
+                      )
+                        .toString()
+                        .padStart(2, "0")}`
+                    : "Unknown"}
+                </span>
+                {videoPreview.isPreview && (
+                  <span className="text-blue-600 font-bold">
+                    Preview Enabled
+                  </span>
+                )}
+              </div>
             </div>
           </div>
         </div>

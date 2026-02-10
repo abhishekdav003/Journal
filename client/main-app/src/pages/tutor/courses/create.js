@@ -13,7 +13,10 @@ export default function CreateCourse() {
 
   const [formData, setFormData] = useState({
     title: "",
+    tagline: "",
     description: "",
+    learningPoints: [""],
+    requirements: [""],
     category: "programming",
     level: "beginner",
     price: 0,
@@ -56,7 +59,18 @@ export default function CreateCourse() {
     setLoading(true);
 
     try {
-      await createCourse(formData);
+      const cleanedLearningPoints = formData.learningPoints
+        .map((point) => point.trim())
+        .filter(Boolean);
+      const cleanedRequirements = formData.requirements
+        .map((req) => req.trim())
+        .filter(Boolean);
+
+      await createCourse({
+        ...formData,
+        learningPoints: cleanedLearningPoints,
+        requirements: cleanedRequirements,
+      });
       toast.success("Course created successfully!");
       setTimeout(() => {
         router.push("/tutor/courses");
@@ -110,6 +124,25 @@ export default function CreateCourse() {
             />
           </div>
 
+          {/* Tagline */}
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-2">
+              Short Tagline
+            </label>
+            <input
+              className="w-full p-4 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none transition font-medium text-gray-900 placeholder-gray-400 bg-white"
+              placeholder="A short, punchy summary of the course"
+              value={formData.tagline}
+              onChange={(e) =>
+                setFormData({ ...formData, tagline: e.target.value })
+              }
+              maxLength={200}
+            />
+            <p className="text-xs text-gray-400 mt-2">
+              This appears under your title on the course landing page.
+            </p>
+          </div>
+
           {/* Description */}
           <div>
             <label className="block text-sm font-bold text-gray-700 mb-2">
@@ -124,6 +157,102 @@ export default function CreateCourse() {
               }
               required
             />
+          </div>
+
+          {/* What you'll learn */}
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-2">
+              What you'll learn
+            </label>
+            <div className="space-y-3">
+              {formData.learningPoints.map((point, index) => (
+                <div key={index} className="flex items-center gap-3">
+                  <input
+                    className="flex-1 p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none transition font-medium text-gray-900 placeholder-gray-400 bg-white"
+                    placeholder={`Outcome ${index + 1}`}
+                    value={point}
+                    onChange={(e) => {
+                      const updated = [...formData.learningPoints];
+                      updated[index] = e.target.value;
+                      setFormData({ ...formData, learningPoints: updated });
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (formData.learningPoints.length === 1) return;
+                      const updated = formData.learningPoints.filter(
+                        (_, idx) => idx !== index,
+                      );
+                      setFormData({ ...formData, learningPoints: updated });
+                    }}
+                    className="px-3 py-2 text-sm font-bold text-gray-500 hover:text-red-600 transition"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={() =>
+                setFormData({
+                  ...formData,
+                  learningPoints: [...formData.learningPoints, ""],
+                })
+              }
+              className="mt-3 text-sm font-bold text-purple-600 hover:text-purple-700 transition"
+            >
+              + Add another outcome
+            </button>
+          </div>
+
+          {/* Requirements */}
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-2">
+              Requirements <span className="text-gray-400 font-semibold">(Optional)</span>
+            </label>
+            <div className="space-y-3">
+              {formData.requirements.map((req, index) => (
+                <div key={index} className="flex items-center gap-3">
+                  <input
+                    className="flex-1 p-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none transition font-medium text-gray-900 placeholder-gray-400 bg-white"
+                    placeholder={`Requirement ${index + 1}`}
+                    value={req}
+                    onChange={(e) => {
+                      const updated = [...formData.requirements];
+                      updated[index] = e.target.value;
+                      setFormData({ ...formData, requirements: updated });
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (formData.requirements.length === 1) return;
+                      const updated = formData.requirements.filter(
+                        (_, idx) => idx !== index,
+                      );
+                      setFormData({ ...formData, requirements: updated });
+                    }}
+                    className="px-3 py-2 text-sm font-bold text-gray-500 hover:text-red-600 transition"
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={() =>
+                setFormData({
+                  ...formData,
+                  requirements: [...formData.requirements, ""],
+                })
+              }
+              className="mt-3 text-sm font-bold text-purple-600 hover:text-purple-700 transition"
+            >
+              + Add another requirement
+            </button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

@@ -336,7 +336,7 @@ const DashboardHome = ({ user }) => {
                     <span className="text-xl">📊</span>
                   </div>
                   <div>
-                    <h3 className="font-extrabold text-white text-xl bg-linear-to-r from-white to-gray-300 bg-clip-text text-transparent">
+                    <h3 className="font-extrabold text-white text-xl bg-linear-to-r from-white to-gray-300 bg-clip-text">
                       Course Performance
                     </h3>
                     <p className="text-gray-400 text-xs mt-0.5">
@@ -510,7 +510,7 @@ const DashboardHome = ({ user }) => {
                   <span className="text-xl">👨‍🏫</span>
                 </div>
                 <div>
-                  <h3 className="font-extrabold text-white text-xl bg-linear-to-r from-white to-gray-300 bg-clip-text text-transparent">
+                  <h3 className="font-extrabold text-white text-xl bg-linear-to-r from-white to-gray-300 bg-clip-text">
                     Your Tutors
                   </h3>
                   <p className="text-gray-400 text-xs mt-0.5">
