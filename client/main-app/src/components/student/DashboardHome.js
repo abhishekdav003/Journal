@@ -498,7 +498,7 @@ const DashboardHome = ({ user }) => {
         </div>
 
         {/* Your Tutors - Enhanced Design */}
-        <div className="bg-linear-to-br from-[#1E1E2E] via-[#252535] to-[#1E1E2E] p-8 rounded-3xl border border-purple-500/20 shadow-2xl shadow-purple-900/30 hover:shadow-purple-800/40 transition-all duration-300 relative overflow-hidden">
+        <div className="bg-transparent p-8 rounded-3xl border border-purple-500/20 shadow-2xl shadow-purple-900/30 hover:shadow-purple-800/40 transition-all duration-300 relative overflow-hidden">
           {/* Decorative background elements */}
           <div className="absolute top-0 right-0 w-48 h-48 bg-purple-600/10 rounded-full blur-3xl"></div>
           <div className="absolute bottom-0 left-0 w-32 h-32 bg-pink-600/10 rounded-full blur-3xl"></div>
