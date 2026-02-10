@@ -552,7 +552,7 @@ export default function CourseEditor() {
                                   {lecture.videoUrl && (
                                     <div className="mt-3 flex items-center gap-3">
                                       <div
-                                        className="relative group cursor-pointer w-24 h-16 bg-gray-900 rounded-lg border border-gray-700 overflow-hidden flex-shrink-0"
+                                        className="relative group cursor-pointer w-24 h-16 bg-gray-900 rounded-lg border border-gray-700 overflow-hidden shrink-0"
                                         onClick={() => setVideoPreview(lecture)}
                                       >
                                         <div className="w-full h-full bg-gray-800 flex items-center justify-center">
