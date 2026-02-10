@@ -35,6 +35,7 @@ export default function CourseEditor() {
   const router = useRouter();
   const { id } = router.query;
   const thumbnailInputRef = useRef(null);
+  const videoModalRef = useRef(null);
 
   const [course, setCourse] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -74,6 +75,26 @@ export default function CourseEditor() {
   useEffect(() => {
     if (id) fetchCourseData(id);
   }, [id]);
+
+  // Extract duration from video element in modal as fallback
+  useEffect(() => {
+    if (videoPreview && videoModalRef.current) {
+      const handleLoadedMetadata = () => {
+        const duration = Math.round(videoModalRef.current.duration);
+        if (duration > 0 && (!lectureData.duration || lectureData.duration === 0)) {
+          setLectureData((prev) => ({
+            ...prev,
+            duration,
+          }));
+          console.log(`Duration extracted from video modal: ${duration} seconds`);
+        }
+      };
+
+      const video = videoModalRef.current;
+      video.addEventListener("loadedmetadata", handleLoadedMetadata);
+      return () => video.removeEventListener("loadedmetadata", handleLoadedMetadata);
+    }
+  }, [videoPreview, lectureData.duration]);
 
   const fetchCourseData = async (courseId) => {
     try {
@@ -131,6 +152,28 @@ export default function CourseEditor() {
     }
   };
 
+  // Helper function to extract video duration from file
+  const getVideoDuration = (file) => {
+    return new Promise((resolve) => {
+      const video = document.createElement("video");
+      const objectUrl = URL.createObjectURL(file);
+
+      video.addEventListener("loadedmetadata", () => {
+        const duration = Math.round(video.duration);
+        URL.revokeObjectURL(objectUrl);
+        resolve(duration);
+      });
+
+      video.addEventListener("error", () => {
+        URL.revokeObjectURL(objectUrl);
+        console.error("Failed to load video metadata");
+        resolve(0);
+      });
+
+      video.src = objectUrl;
+    });
+  };
+
   // 2. Video Upload Handler (Lecture Modal)
   const handleVideoFileSelect = async (e) => {
     const file = e.target.files[0];
@@ -140,6 +183,14 @@ export default function CourseEditor() {
     if (file.size > 100 * 1024 * 1024) {
       // 100MB warning
       toast("Uploading large file, please wait...", { icon: "⏳" });
+    }
+
+    // Extract duration from the video file before uploading
+    let fileDuration = 0;
+    try {
+      fileDuration = await getVideoDuration(file);
+    } catch (err) {
+      console.warn("Could not extract duration from file:", err);
     }
 
     const formData = new FormData();
@@ -162,7 +213,7 @@ export default function CourseEditor() {
         res.data.data?.video?.publicId ||
         res.data.data?.video?.public_id ||
         res.data.publicId;
-      const duration = res.data.data?.video?.duration || 0;
+      const duration = fileDuration || 0;
 
       setLectureData((prev) => ({
         ...prev,
@@ -1054,6 +1105,7 @@ export default function CourseEditor() {
             </div>
             <div className="bg-black aspect-video">
               <video
+                ref={videoModalRef}
                 src={videoPreview.videoUrl}
                 controls
                 autoPlay
