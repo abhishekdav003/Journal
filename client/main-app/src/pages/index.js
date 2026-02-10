@@ -1,8 +1,6 @@
 /* eslint-disable @next/next/no-img-element */
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
-import Link from "next/link";
-import Image from "next/image";
 import Hero from "@/components/Hero";
 import Contact from "@/components/Contact";
 import CourseCard from "@/components/CourseCard";
@@ -106,7 +104,7 @@ export default function Home() {
             How it Works
           </h2>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 border border-gray-100 rounded-2xl p-10">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 border-4 border-[#8834D3] rounded-2xl p-10">
             {[
               {
                 title: "Set Your Plan",
@@ -159,10 +157,18 @@ export default function Home() {
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             {/* Illustration */}
             <div className="relative">
+              {/*  */}
+              <div className="absolute -top-[5%] left-[10%] w-88 h-62 bg-linear-to-r from-[#362045] to-[#BD73FF] -z-1 rounded-[50px] -rotate-21"></div>
+              <div className="absolute -bottom-[10%] left-[15%] w-85 h-85 bg-linear-to-r from-[#BD73FF] to-[#362045] -z-2 rounded-[50px] -rotate-21"></div>
+              {/*  */}
+              <div className="absolute -top-[30%] left-[40%] w-10 h-10 bg-[#00A5CF] rounded-full"></div>
+              <div className="absolute top-[40%] -left-[5%] w-6.25 h-6.25 bg-[#FF3226] rounded-full"></div>
+              <div className="absolute bottom-[15%] right-[20%] w-6.25 h-6.25 bg-[#64BC7D] rounded-full"></div>
+
               <img
                 src="./images/Home-Section.svg"
                 alt="Access Illustration"
-                className="w-full h-auto"
+                className="w-125 h-auto"
               />
             </div>
 
@@ -211,7 +217,7 @@ export default function Home() {
           <div className="flex items-center justify-between mb-12 flex-wrap gap-4">
             <div className="flex items-center gap-4">
               <FiTrendingUp className="text-4xl text-red-500" />
-              <h2 className="text-4xl font-extrabold text-gray-900">
+              <h2 className="text-4xl font-extrabold text-gray-100">
                 Trending{" "}
                 <span className="text-transparent bg-clip-text bg-linear-to-r from-purple-600 to-pink-600">
                   Courses
