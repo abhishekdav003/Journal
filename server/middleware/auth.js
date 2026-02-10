@@ -2,7 +2,6 @@ import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 import { AppError } from "../utils/appError.js";
 import { catchAsync } from "../utils/catchAsync.js";
-import { logger } from "../utils/logger.js";
 
 // Protect routes - verify JWT token
 export const protect = catchAsync(async (req, res, next) => {
@@ -22,8 +21,15 @@ export const protect = catchAsync(async (req, res, next) => {
     );
   }
 
-  // Verify token
-  const decoded = jwt.verify(token, process.env.JWT_SECRET);
+  let decoded;
+  try {
+    // Verify token
+    decoded = jwt.verify(token, process.env.JWT_SECRET);
+  } catch (error) {
+    return next(
+      new AppError("Invalid or expired token. Please log in again.", 401),
+    );
+  }
 
   // Check if user still exists
   const user = await User.findById(decoded.id);
@@ -67,7 +73,6 @@ export const optionalAuth = catchAsync(async (req, res, next) => {
     }
   } catch (error) {
     // Invalid token - just continue without user
-    logger.debug("Optional auth: Invalid token, continuing without user");
   }
 
   next();
@@ -76,7 +81,17 @@ export const optionalAuth = catchAsync(async (req, res, next) => {
 // Restrict to specific roles
 export const restrictTo = (...roles) => {
   return (req, res, next) => {
-    if (!roles.includes(req.user.role)) {
+    if (!req.user) {
+      return next(
+        new AppError("User not found. Please log in again.", 401),
+      );
+    }
+
+    const userRole = req.user.role?.toString?.()?.toLowerCase?.()?.trim?.();
+    const allowedRoles = roles.map(r => r.toLowerCase());
+
+    if (!userRole || !allowedRoles.includes(userRole)) {
+      console.error(`Authorization failed: User role '${userRole}' not in allowed [${allowedRoles.join(',')}]`);
       return next(
         new AppError("You do not have permission to perform this action", 403),
       );

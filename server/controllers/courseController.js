@@ -296,8 +296,7 @@ export const addLecture = catchAsync(async (req, res, next) => {
     moduleId,
   } = req.body;
 
-  console.log("addLecture received duration:", duration);
-  console.log("addLecture req.body:", req.body);
+
 
   const course = await Course.findById(req.params.id);
 

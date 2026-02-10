@@ -331,6 +331,10 @@ export default function LearnCourse() {
 
   const fetchEnrollmentProgress = async () => {
     try {
+      if (!user || !user.role) {
+        console.warn("User not properly loaded. User object:", user);
+        return;
+      }
       const response = await getEnrollmentProgress(id);
       if (response.data.success) {
         setEnrollment(response.data.data.enrollment);
@@ -342,7 +346,16 @@ export default function LearnCourse() {
         setCompletedLectures(completed);
       }
     } catch (error) {
-      console.error("Failed to fetch enrollment progress:", error);
+      if (error.response?.status === 403) {
+        console.error(
+          "Authorization failed. Your role:",
+          user?.role,
+          "Error:",
+          error.response?.data?.message,
+        );
+      } else {
+        console.error("Failed to fetch enrollment progress:", error);
+      }
     }
   };
 

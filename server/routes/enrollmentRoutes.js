@@ -17,10 +17,23 @@ router.get("/check/:courseId", optionalAuth, checkEnrollment);
 // All other enrollment routes require authentication
 router.use(protect);
 
+// Test endpoint - check current user info
+router.get("/test/user-info", (req, res) => {
+  res.json({
+    success: true,
+    user: {
+      id: req.user._id,
+      email: req.user.email,
+      role: req.user.role,
+      roleType: typeof req.user.role,
+    },
+  });
+});
+
 router.post("/", createEnrollment);
 
 // --- TUTOR ROUTES ---
-// CHANGE 2: Ye route sabse uppar add karein (student routes se pehle)
+
 router.get("/tutor/my-students", restrictTo("tutor"), getTutorStudents);
 
 router.get(
