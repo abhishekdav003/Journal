@@ -26,7 +26,7 @@ const Sidebar = () => {
   const isActive = (path) => router.asPath === path;
 
   return (
-    <aside className="sticky top-0 left-0 min-h-screen w-16 md:w-64 shrink-0 flex flex-col border-r border-gray-800 bg-[#181824] p-3 text-gray-400 transition-all duration-300 md:p-6">
+    <aside className="sticky top-0 left-0 min-h-screen w-16 md:w-64 shrink-0 flex flex-col bg-transparent p-3 text-gray-300 transition-all duration-300 md:p-6">
 
       <div>
         <nav className="space-y-2">
