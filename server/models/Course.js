@@ -63,11 +63,30 @@ const courseSchema = new mongoose.Schema(
       trim: true,
       maxlength: [100, "Title cannot exceed 100 characters"],
     },
+    tagline: {
+      type: String,
+      trim: true,
+      maxlength: [200, "Tagline cannot exceed 200 characters"],
+    },
     description: {
       type: String,
       required: [true, "Course description is required"],
       maxlength: [2000, "Description cannot exceed 2000 characters"],
     },
+    learningPoints: [
+      {
+        type: String,
+        trim: true,
+        maxlength: [200, "Learning point cannot exceed 200 characters"],
+      },
+    ],
+    requirements: [
+      {
+        type: String,
+        trim: true,
+        maxlength: [200, "Requirement cannot exceed 200 characters"],
+      },
+    ],
     category: {
       type: String,
       required: [true, "Category is required"],

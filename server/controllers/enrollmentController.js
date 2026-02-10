@@ -225,9 +225,20 @@ export const getTutorStudents = catchAsync(async (req, res, next) => {
     .populate("course", "title")
     .sort("-createdAt");
 
+  // Transform enrollments to include progress as completion percentage (not the array)
+  const transformedEnrollments = enrollments.map(enrollment => ({
+    _id: enrollment._id,
+    student: enrollment.student,
+    course: enrollment.course,
+    progress: enrollment.completionPercentage || 0,
+    enrolledAt: enrollment.enrolledAt,
+    createdAt: enrollment.createdAt,
+    updatedAt: enrollment.updatedAt
+  }));
+
   res.status(200).json({
     success: true,
-    count: enrollments.length,
-    data: { enrollments },
+    count: transformedEnrollments.length,
+    data: { enrollments: transformedEnrollments },
   });
 });

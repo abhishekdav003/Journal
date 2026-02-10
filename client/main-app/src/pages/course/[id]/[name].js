@@ -299,6 +299,24 @@ export default function CourseDetail() {
               </div>
             </div>
 
+            {/* Requirements */}
+            <div>
+              <h2 className="text-2xl font-bold text-gray-900 mb-4">
+                Requirements
+              </h2>
+              {course.requirements && course.requirements.length > 0 ? (
+                <ul className="list-disc list-inside text-gray-700 space-y-2">
+                  {course.requirements.map((req, idx) => (
+                    <li key={idx}>{req}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-gray-700">
+                  No prior experience required. Just bring your curiosity.
+                </p>
+              )}
+            </div>
+
             {/* Course Content */}
             <div>
               <h2 className="text-2xl font-bold text-gray-900 mb-4">
@@ -499,6 +517,16 @@ export default function CourseDetail() {
                 <div className="flex items-center gap-3 text-gray-700">
                   <FiUsers className="text-green-600" />
                   <span>{course.enrolledStudents || 0} students</span>
+                </div>
+                <div className="flex items-center gap-3 text-gray-700">
+                  <FiCheckCircle className="text-purple-600" />
+                  <span>{course.level || "All Levels"}</span>
+                </div>
+                <div className="flex items-center gap-3 text-gray-700">
+                  <FiClock className="text-gray-500" />
+                  <span>
+                    Updated {new Date(course.updatedAt || Date.now()).toLocaleDateString()}
+                  </span>
                 </div>
               </div>
             </div>
