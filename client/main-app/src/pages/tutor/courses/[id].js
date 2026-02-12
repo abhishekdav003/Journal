@@ -57,6 +57,7 @@ export default function CourseEditor() {
     description: "",
     videoUrl: "",
     videoPublicId: "",
+    videoName: "",
     duration: 0,
     isPreview: false,
   });
@@ -71,10 +72,64 @@ export default function CourseEditor() {
     message: "",
   });
   const [videoPreview, setVideoPreview] = useState(null);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [detailsData, setDetailsData] = useState({
+    title: "",
+    tagline: "",
+    description: "",
+    learningPoints: [""],
+    requirements: [""],
+    category: "programming",
+    level: "beginner",
+    price: 0,
+  });
+  const [isSavingDetails, setIsSavingDetails] = useState(false);
+  const [isEditLectureModalOpen, setIsEditLectureModalOpen] = useState(false);
+  const [editingLectureId, setEditingLectureId] = useState(null);
+  const [editLectureData, setEditLectureData] = useState({
+    title: "",
+    description: "",
+    videoUrl: "",
+    videoPublicId: "",
+    videoName: "",
+    duration: 0,
+    isPreview: false,
+  });
+  const [isUploadingEditVideo, setIsUploadingEditVideo] = useState(false);
+  const [editUploadProgress, setEditUploadProgress] = useState(0);
 
   useEffect(() => {
     if (id) fetchCourseData(id);
   }, [id]);
+
+  useEffect(() => {
+    const isAnyModalOpen =
+      isModuleModalOpen ||
+      isEditModuleModalOpen ||
+      isLectureModalOpen ||
+      isEditLectureModalOpen ||
+      isDetailsModalOpen ||
+      confirmDialog.open ||
+      !!videoPreview;
+
+    if (isAnyModalOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [
+    isModuleModalOpen,
+    isEditModuleModalOpen,
+    isLectureModalOpen,
+    isEditLectureModalOpen,
+    isDetailsModalOpen,
+    confirmDialog.open,
+    videoPreview,
+  ]);
 
   // Extract duration from video element in modal as fallback
   useEffect(() => {
@@ -108,6 +163,18 @@ export default function CourseEditor() {
       toast.error("Could not load course details");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const getVideoDisplayName = (url, fallback = "Uploaded video") => {
+    if (!url) return fallback;
+    const cleanUrl = url.split("?")[0];
+    const lastSegment = cleanUrl.split("/").pop();
+    if (!lastSegment) return fallback;
+    try {
+      return decodeURIComponent(lastSegment);
+    } catch (err) {
+      return lastSegment;
     }
   };
 
@@ -219,6 +286,7 @@ export default function CourseEditor() {
         ...prev,
         videoUrl: url,
         videoPublicId: publicId || prev.videoPublicId,
+        videoName: file?.name || getVideoDisplayName(url),
         duration,
       }));
       toast.success("Video uploaded successfully!");
@@ -328,6 +396,7 @@ export default function CourseEditor() {
       description: "",
       videoUrl: "",
       videoPublicId: "",
+      videoName: "",
       duration: 0,
       isPreview: false,
     });
@@ -360,6 +429,7 @@ export default function CourseEditor() {
         description: "",
         videoUrl: "",
         videoPublicId: "",
+        videoName: "",
         duration: 0,
         isPreview: false,
       });
@@ -402,6 +472,165 @@ export default function CourseEditor() {
     } catch (err) {
       console.error(err);
       toast.error("Failed to update preview");
+    }
+  };
+
+  const openEditLectureModal = (lecture) => {
+    setEditingLectureId(lecture._id);
+    setEditLectureData({
+      title: lecture.title || "",
+      description: lecture.description || "",
+      videoUrl: lecture.videoUrl || "",
+      videoPublicId: lecture.videoPublicId || "",
+      videoName: getVideoDisplayName(lecture.videoUrl),
+      duration: lecture.duration || 0,
+      isPreview: !!lecture.isPreview,
+    });
+    setIsEditLectureModalOpen(true);
+  };
+
+  const handleEditVideoFileSelect = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.size > 100 * 1024 * 1024) {
+      toast("Uploading large file, please wait...", { icon: "⏳" });
+    }
+
+    let fileDuration = 0;
+    try {
+      fileDuration = await getVideoDuration(file);
+    } catch (err) {
+      console.warn("Could not extract duration from file:", err);
+    }
+
+    const formData = new FormData();
+    formData.append("video", file);
+
+    try {
+      setIsUploadingEditVideo(true);
+      setEditUploadProgress(0);
+
+      const res = await uploadVideo(formData, (progressEvent) => {
+        const percentCompleted = Math.round(
+          (progressEvent.loaded * 100) / progressEvent.total
+        );
+        setEditUploadProgress(percentCompleted);
+      });
+
+      const url =
+        res.data.data?.video?.url || res.data.data?.url || res.data.url;
+      const publicId =
+        res.data.data?.video?.publicId ||
+        res.data.data?.video?.public_id ||
+        res.data.publicId;
+
+      setEditLectureData((prev) => ({
+        ...prev,
+        videoUrl: url,
+        videoPublicId: publicId || prev.videoPublicId,
+        videoName: file?.name || getVideoDisplayName(url),
+        duration: fileDuration || prev.duration || 0,
+      }));
+      toast.success("Video uploaded successfully!");
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to upload video");
+    } finally {
+      setIsUploadingEditVideo(false);
+      setEditUploadProgress(0);
+    }
+  };
+
+  const handleUpdateLecture = async (e) => {
+    e.preventDefault();
+    if (!editingLectureId) return;
+
+    if (!editLectureData.title.trim()) {
+      toast.error("Lecture title is required");
+      return;
+    }
+
+    if (!editLectureData.videoUrl.trim()) {
+      toast.error("Please upload a video");
+      return;
+    }
+
+    try {
+      await updateLecture(id, editingLectureId, {
+        title: editLectureData.title,
+        description: editLectureData.description,
+        videoUrl: editLectureData.videoUrl,
+        videoPublicId: editLectureData.videoPublicId,
+        duration: editLectureData.duration,
+        isPreview: editLectureData.isPreview,
+      });
+      toast.success("Lecture updated");
+      setIsEditLectureModalOpen(false);
+      fetchCourseData(id);
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.message || "Failed to update lecture");
+    }
+  };
+
+  const openDetailsModal = () => {
+    if (!course) return;
+    setDetailsData({
+      title: course.title || "",
+      tagline: course.tagline || "",
+      description: course.description || "",
+      learningPoints:
+        course.learningPoints && course.learningPoints.length > 0
+          ? course.learningPoints
+          : [""],
+      requirements:
+        course.requirements && course.requirements.length > 0
+          ? course.requirements
+          : [""],
+      category: course.category || "programming",
+      level: course.level || "beginner",
+      price: typeof course.price === "number" ? course.price : 0,
+    });
+    setIsDetailsModalOpen(true);
+  };
+
+  const handleUpdateDetails = async (e) => {
+    e.preventDefault();
+
+    if (!detailsData.title.trim()) {
+      toast.error("Title is required");
+      return;
+    }
+
+    if (!detailsData.description.trim()) {
+      toast.error("Description is required");
+      return;
+    }
+
+    const cleanedLearningPoints = detailsData.learningPoints
+      .map((point) => point.trim())
+      .filter(Boolean);
+    const cleanedRequirements = detailsData.requirements
+      .map((req) => req.trim())
+      .filter(Boolean);
+
+    setIsSavingDetails(true);
+    try {
+      const res = await updateCourse(id, {
+        ...detailsData,
+        price: Number(detailsData.price) || 0,
+        learningPoints: cleanedLearningPoints,
+        requirements: cleanedRequirements,
+      });
+      setCourse(res.data.data?.course || res.data.data);
+      toast.success("Course details updated");
+      setIsDetailsModalOpen(false);
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.message || "Failed to update details");
+    } finally {
+      setIsSavingDetails(false);
     }
   };
 
@@ -655,11 +884,7 @@ export default function CourseEditor() {
                                     : "Preview Off"}
                                 </button>
                                 <button
-                                  onClick={() =>
-                                    toast("Edit lecture coming soon", {
-                                      icon: "🛠️",
-                                    })
-                                  }
+                                  onClick={() => openEditLectureModal(lecture)}
                                   className="p-2 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition"
                                 >
                                   <FiEdit2 size={16} />
@@ -782,7 +1007,10 @@ export default function CourseEditor() {
                 <span className="text-2xl font-black text-gray-900">
                   ₹{course.price}
                 </span>
-                <button className="text-purple-600 text-xs font-bold hover:underline">
+                <button
+                  onClick={openDetailsModal}
+                  className="text-purple-600 text-xs font-bold hover:underline"
+                >
                   Edit Details
                 </button>
               </div>
@@ -790,6 +1018,434 @@ export default function CourseEditor() {
           </div>
         </div>
       </div>
+
+      {isDetailsModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold text-gray-900">
+                Edit Course Details
+              </h3>
+              <button
+                onClick={() => setIsDetailsModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <FiX size={24} />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateDetails} className="space-y-6">
+              <div className="max-h-[65vh] overflow-y-auto pr-1 space-y-6">
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                    Course Title
+                  </label>
+                  <input
+                    type="text"
+                    className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none transition text-gray-900 placeholder-gray-400 bg-white"
+                    placeholder="e.g. Master Next.js 14 from Scratch"
+                    value={detailsData.title}
+                    onChange={(e) =>
+                      setDetailsData((prev) => ({
+                        ...prev,
+                        title: e.target.value,
+                      }))
+                    }
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                    Short Tagline
+                  </label>
+                  <input
+                    type="text"
+                    className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none transition text-gray-900 placeholder-gray-400 bg-white"
+                    placeholder="A short, punchy summary of the course"
+                    value={detailsData.tagline}
+                    onChange={(e) =>
+                      setDetailsData((prev) => ({
+                        ...prev,
+                        tagline: e.target.value,
+                      }))
+                    }
+                    maxLength={200}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                    Description
+                  </label>
+                  <textarea
+                    className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none transition text-gray-900 placeholder-gray-400 bg-white resize-none h-28"
+                    placeholder="What will students learn in this course?"
+                    value={detailsData.description}
+                    onChange={(e) =>
+                      setDetailsData((prev) => ({
+                        ...prev,
+                        description: e.target.value,
+                      }))
+                    }
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                    What you'll learn
+                  </label>
+                  <div className="space-y-3">
+                    {detailsData.learningPoints.map((point, index) => (
+                      <div key={index} className="flex items-center gap-3">
+                        <input
+                          type="text"
+                          className="flex-1 p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none transition text-gray-900 placeholder-gray-400 bg-white"
+                          placeholder={`Outcome ${index + 1}`}
+                          value={point}
+                          onChange={(e) => {
+                            const updated = [...detailsData.learningPoints];
+                            updated[index] = e.target.value;
+                            setDetailsData((prev) => ({
+                              ...prev,
+                              learningPoints: updated,
+                            }));
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (detailsData.learningPoints.length === 1) return;
+                            const updated = detailsData.learningPoints.filter(
+                              (_, idx) => idx !== index
+                            );
+                            setDetailsData((prev) => ({
+                              ...prev,
+                              learningPoints: updated,
+                            }));
+                          }}
+                          className="px-3 py-2 text-sm font-bold text-gray-500 hover:text-red-600 transition"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setDetailsData((prev) => ({
+                        ...prev,
+                        learningPoints: [...prev.learningPoints, ""],
+                      }))
+                    }
+                    className="mt-3 text-sm font-bold text-purple-600 hover:text-purple-700 transition"
+                  >
+                    + Add another outcome
+                  </button>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                    Requirements (Optional)
+                  </label>
+                  <div className="space-y-3">
+                    {detailsData.requirements.map((req, index) => (
+                      <div key={index} className="flex items-center gap-3">
+                        <input
+                          type="text"
+                          className="flex-1 p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none transition text-gray-900 placeholder-gray-400 bg-white"
+                          placeholder={`Requirement ${index + 1}`}
+                          value={req}
+                          onChange={(e) => {
+                            const updated = [...detailsData.requirements];
+                            updated[index] = e.target.value;
+                            setDetailsData((prev) => ({
+                              ...prev,
+                              requirements: updated,
+                            }));
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (detailsData.requirements.length === 1) return;
+                            const updated = detailsData.requirements.filter(
+                              (_, idx) => idx !== index
+                            );
+                            setDetailsData((prev) => ({
+                              ...prev,
+                              requirements: updated,
+                            }));
+                          }}
+                          className="px-3 py-2 text-sm font-bold text-gray-500 hover:text-red-600 transition"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setDetailsData((prev) => ({
+                        ...prev,
+                        requirements: [...prev.requirements, ""],
+                      }))
+                    }
+                    className="mt-3 text-sm font-bold text-purple-600 hover:text-purple-700 transition"
+                  >
+                    + Add another requirement
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-2">
+                      Category
+                    </label>
+                    <select
+                      className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none transition bg-white text-gray-900 cursor-pointer"
+                      value={detailsData.category}
+                      onChange={(e) =>
+                        setDetailsData((prev) => ({
+                          ...prev,
+                          category: e.target.value,
+                        }))
+                      }
+                    >
+                      <option value="programming">Programming</option>
+                      <option value="design">Design</option>
+                      <option value="business">Business</option>
+                      <option value="marketing">Marketing</option>
+                      <option value="photography">Photography</option>
+                      <option value="music">Music</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-2">
+                      Level
+                    </label>
+                    <select
+                      className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none transition bg-white text-gray-900 cursor-pointer"
+                      value={detailsData.level}
+                      onChange={(e) =>
+                        setDetailsData((prev) => ({
+                          ...prev,
+                          level: e.target.value,
+                        }))
+                      }
+                    >
+                      <option value="beginner">Beginner</option>
+                      <option value="intermediate">Intermediate</option>
+                      <option value="advanced">Advanced</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                    Price (INR)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none transition text-gray-900 placeholder-gray-400 bg-white"
+                    placeholder="0 for Free"
+                    value={detailsData.price}
+                    onChange={(e) =>
+                      setDetailsData((prev) => ({
+                        ...prev,
+                        price: e.target.value,
+                      }))
+                    }
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsDetailsModalOpen(false)}
+                  className="px-5 py-2.5 rounded-xl font-bold text-gray-600 hover:bg-gray-100 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingDetails}
+                  className="px-5 py-2.5 rounded-xl font-bold bg-purple-600 text-white hover:bg-purple-700 transition shadow-lg disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {isSavingDetails ? (
+                    <>
+                      <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span>
+                      Saving...
+                    </>
+                  ) : (
+                    "Save Changes"
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {isEditLectureModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold text-gray-900">Edit Lecture</h3>
+              <button
+                onClick={() => setIsEditLectureModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <FiX size={24} />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateLecture}>
+              <div className="space-y-4 mb-6 max-h-96 overflow-y-auto">
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                    Lecture Title
+                  </label>
+                  <input
+                    type="text"
+                    className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none transition text-gray-900 placeholder-gray-400 bg-white"
+                    value={editLectureData.title}
+                    onChange={(e) =>
+                      setEditLectureData((prev) => ({
+                        ...prev,
+                        title: e.target.value,
+                      }))
+                    }
+                    autoFocus
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                    Description (Optional)
+                  </label>
+                  <textarea
+                    className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none transition text-gray-900 placeholder-gray-400 bg-white resize-none h-24"
+                    value={editLectureData.description}
+                    onChange={(e) =>
+                      setEditLectureData((prev) => ({
+                        ...prev,
+                        description: e.target.value,
+                      }))
+                    }
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                    Video Source
+                  </label>
+
+                  {editLectureData.videoUrl ? (
+                    <div className="flex items-center gap-2 border border-gray-300 rounded-xl p-2 bg-green-50 mb-3">
+                      <FiVideo className="text-green-500 ml-2" />
+                      <span className="w-full p-1 text-sm text-gray-900 font-medium truncate">
+                        {editLectureData.videoName ||
+                          getVideoDisplayName(editLectureData.videoUrl)}
+                      </span>
+                      <span className="text-xs bg-green-200 text-green-700 px-2 py-1 rounded whitespace-nowrap font-bold">
+                        Uploaded
+                      </span>
+                    </div>
+                  ) : null}
+
+                  <div className="relative border-2 border-dashed border-gray-200 rounded-xl p-4 text-center hover:bg-gray-50 transition cursor-pointer">
+                    <input
+                      type="file"
+                      accept="video/*"
+                      className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                      onChange={handleEditVideoFileSelect}
+                      disabled={isUploadingEditVideo}
+                    />
+                    {isUploadingEditVideo ? (
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-center gap-2 text-purple-600 font-bold text-sm">
+                          <span className="animate-spin h-4 w-4 border-2 border-purple-600 border-t-transparent rounded-full"></span>
+                          Uploading video... {editUploadProgress}%
+                        </div>
+                        <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+                          <div
+                            className="bg-purple-600 h-2.5 transition-all duration-300 ease-out"
+                            style={{ width: `${editUploadProgress}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="text-gray-500 text-sm">
+                        <FiUploadCloud
+                          className="mx-auto mb-1 text-gray-400"
+                          size={24}
+                        />
+                        <span className="font-bold text-purple-600">
+                          Click to replace video
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {editLectureData.videoUrl && (
+                  <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-xl border border-blue-200">
+                    <input
+                      type="checkbox"
+                      id="editIsPreview"
+                      checked={editLectureData.isPreview}
+                      onChange={(e) =>
+                        setEditLectureData((prev) => ({
+                          ...prev,
+                          isPreview: e.target.checked,
+                        }))
+                      }
+                      className="w-4 h-4 text-blue-600 rounded cursor-pointer"
+                    />
+                    <div className="flex-1">
+                      <label
+                        htmlFor="editIsPreview"
+                        className="text-sm font-bold text-gray-900 cursor-pointer"
+                      >
+                        Make this a Preview Video
+                      </label>
+                      <p className="text-xs text-gray-600 mt-1">
+                        Students can watch this video without purchasing the
+                        course
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsEditLectureModalOpen(false)}
+                  className="px-5 py-2.5 rounded-xl font-bold text-gray-600 hover:bg-gray-100 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isUploadingEditVideo}
+                  className="px-5 py-2.5 rounded-xl font-bold bg-purple-600 text-white hover:bg-purple-700 transition shadow-lg disabled:opacity-70 disabled:cursor-not-allowed"
+                >
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* MODAL: Add Module */}
       {isModuleModalOpen && (
@@ -947,13 +1603,10 @@ export default function CourseEditor() {
                     // Show uploaded video URL as read-only
                     <div className="flex items-center gap-2 border border-gray-300 rounded-xl p-2 bg-green-50 mb-3">
                       <FiVideo className="text-green-500 ml-2" />
-                      <input
-                        type="text"
-                        className="w-full p-1 bg-transparent outline-none text-sm text-gray-900 font-medium"
-                        value={lectureData.videoUrl}
-                        disabled
-                        readOnly
-                      />
+                      <span className="w-full p-1 text-sm text-gray-900 font-medium truncate">
+                        {lectureData.videoName ||
+                          getVideoDisplayName(lectureData.videoUrl)}
+                      </span>
                       <span className="text-xs bg-green-200 text-green-700 px-2 py-1 rounded whitespace-nowrap font-bold">
                         Uploaded
                       </span>
