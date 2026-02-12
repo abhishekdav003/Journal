@@ -36,8 +36,7 @@ export default function CourseEditor() {
   const { id } = router.query;
   const thumbnailInputRef = useRef(null);
   const videoModalRef = useRef(null);
-  const uploadAbortRef = useRef(null);
-  const editUploadAbortRef = useRef(null);
+  const uploadIdCounterRef = useRef(0);
 
   const [course, setCourse] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -63,9 +62,7 @@ export default function CourseEditor() {
     duration: 0,
     isPreview: false,
   });
-  const [isUploadingVideo, setIsUploadingVideo] = useState(false);
   const [isUploadingThumb, setIsUploadingThumb] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
   const [lectureFile, setLectureFile] = useState(null);
   const [confirmDialog, setConfirmDialog] = useState({
     open: false,
@@ -98,10 +95,11 @@ export default function CourseEditor() {
     duration: 0,
     isPreview: false,
   });
-  const [isUploadingEditVideo, setIsUploadingEditVideo] = useState(false);
-  const [editUploadProgress, setEditUploadProgress] = useState(0);
   const [editLectureFile, setEditLectureFile] = useState(null);
-  const [cancelUploadTarget, setCancelUploadTarget] = useState(null);
+
+  // Upload Queue for Multiple Simultaneous Uploads
+  const [uploadQueue, setUploadQueue] = useState(new Map());
+  const [cancelUploadId, setCancelUploadId] = useState(null);
 
   useEffect(() => {
     if (id) fetchCourseData(id);
@@ -115,7 +113,8 @@ export default function CourseEditor() {
       isEditLectureModalOpen ||
       isDetailsModalOpen ||
       confirmDialog.open ||
-      !!videoPreview;
+      !!videoPreview ||
+      !!cancelUploadId;
 
     if (isAnyModalOpen) {
       document.body.style.overflow = "hidden";
@@ -134,6 +133,7 @@ export default function CourseEditor() {
     isDetailsModalOpen,
     confirmDialog.open,
     videoPreview,
+    cancelUploadId,
   ]);
 
   // Extract duration from video element in modal as fallback
@@ -246,24 +246,49 @@ export default function CourseEditor() {
     });
   };
 
-  const uploadLectureVideo = async (file, setUploading, setProgress, abortRef) => {
+  const uploadLectureVideo = async (uploadId, file, toastId, fileName) => {
     const formData = new FormData();
     formData.append("video", file);
 
     const controller = new AbortController();
-    abortRef.current = controller;
+
+    // Update queue with controller
+    setUploadQueue((prev) => {
+      const newQueue = new Map(prev);
+      const upload = newQueue.get(uploadId);
+      if (upload) {
+        newQueue.set(uploadId, { ...upload, controller });
+      }
+      return newQueue;
+    });
 
     try {
-      setUploading(true);
-      setProgress(0);
-
       const res = await uploadVideo(
         formData,
         (progressEvent) => {
           const percentCompleted = Math.round(
             (progressEvent.loaded * 100) / progressEvent.total
           );
-          setProgress(percentCompleted);
+          
+          const uploadData = {
+            file,
+            progress: percentCompleted,
+            controller,
+            status: "uploading",
+            fileName,
+          };
+          
+          setUploadQueue((prev) => {
+            const newQueue = new Map(prev);
+            newQueue.set(uploadId, uploadData);
+            return newQueue;
+          });
+          
+          // Update the toast with current data
+          toast.custom(renderUploadToast(uploadId, uploadData), {
+            id: toastId,
+            duration: Infinity,
+          });
         },
         { signal: controller.signal }
       );
@@ -275,79 +300,93 @@ export default function CourseEditor() {
         res.data.data?.video?.public_id ||
         res.data.publicId;
 
+      // Mark as completed
+      setUploadQueue((prev) => {
+        const newQueue = new Map(prev);
+        newQueue.delete(uploadId);
+        return newQueue;
+      });
+
       return { url, publicId };
     } catch (err) {
       if (err?.code === "ERR_CANCELED" || err?.name === "CanceledError") {
+        // Mark as canceled
+        setUploadQueue((prev) => {
+          const newQueue = new Map(prev);
+          newQueue.delete(uploadId);
+          return newQueue;
+        });
         toast.error("Upload canceled");
         return null;
       }
+
+      // Mark as failed
+      setUploadQueue((prev) => {
+        const newQueue = new Map(prev);
+        newQueue.delete(uploadId);
+        return newQueue;
+      });
       throw err;
-    } finally {
-      setUploading(false);
-      setProgress(0);
-      abortRef.current = null;
     }
   };
 
-  const cancelAddUpload = () => {
-    if (uploadAbortRef.current) {
-      uploadAbortRef.current.abort();
+  const cancelUpload = (uploadId) => {
+    const upload = uploadQueue.get(uploadId);
+    if (upload?.controller) {
+      upload.controller.abort();
     }
+    setUploadQueue((prev) => {
+      const newQueue = new Map(prev);
+      newQueue.delete(uploadId);
+      return newQueue;
+    });
   };
 
-  const cancelEditUpload = () => {
-    if (editUploadAbortRef.current) {
-      editUploadAbortRef.current.abort();
-    }
-  };
-
-  const openCancelUploadModal = (target) => {
-    setCancelUploadTarget(target);
+  const openCancelUploadModal = (uploadId) => {
+    setCancelUploadId(uploadId);
   };
 
   const closeCancelUploadModal = () => {
-    setCancelUploadTarget(null);
+    setCancelUploadId(null);
   };
 
   const confirmCancelUpload = () => {
-    if (cancelUploadTarget === "add") {
-      cancelAddUpload();
-    }
-    if (cancelUploadTarget === "edit") {
-      cancelEditUpload();
+    if (cancelUploadId) {
+      cancelUpload(cancelUploadId);
     }
     closeCancelUploadModal();
   };
 
-  const renderUploadToast = ({
-    progress,
-    onCancel,
-    label = "Uploading video",
-  }) => (
-    <div className="bg-white border border-gray-200 rounded-xl shadow-lg px-4 py-3 w-full max-w-sm">
-      <div className="flex items-center justify-between mb-2">
-        <p className="text-sm font-bold text-gray-900">
-          {label}... {progress}%
+  const renderUploadToast = (uploadId, uploadData = null) => {
+    const upload = uploadData || uploadQueue.get(uploadId);
+    if (!upload) return null;
+
+    return (
+      <div className="bg-white border border-gray-200 rounded-xl shadow-lg px-4 py-3 w-full max-w-sm">
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-sm font-bold text-gray-900">
+            Uploading {upload.fileName}... {upload.progress}%
+          </p>
+          <button
+            className="text-xs font-bold text-red-600 hover:text-red-700"
+            onClick={() => openCancelUploadModal(uploadId)}
+            type="button"
+          >
+            Cancel
+          </button>
+        </div>
+        <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+          <div
+            className="bg-purple-600 h-2 transition-all duration-300 ease-out"
+            style={{ width: `${upload.progress}%` }}
+          ></div>
+        </div>
+        <p className="text-[11px] text-gray-500 mt-2">
+          Cancel will stop the upload. Your lecture will not be saved.
         </p>
-        <button
-          className="text-xs font-bold text-red-600 hover:text-red-700"
-          onClick={onCancel}
-          type="button"
-        >
-          Cancel
-        </button>
       </div>
-      <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
-        <div
-          className="bg-purple-600 h-2 transition-all duration-300 ease-out"
-          style={{ width: `${progress}%` }}
-        ></div>
-      </div>
-      <p className="text-[11px] text-gray-500 mt-2">
-        Cancel will stop the upload. Your lecture will not be saved.
-      </p>
-    </div>
-  );
+    );
+  };
 
   // 2. Video Upload Handler (Lecture Modal)
   const handleVideoFileSelect = async (e) => {
@@ -523,32 +562,30 @@ export default function CourseEditor() {
           return;
         }
 
-        const toastId = toast.custom(
-          renderUploadToast({
-            progress: 0,
-            onCancel: () => {
-              openCancelUploadModal("add");
-            },
-          }),
-          { duration: Infinity }
-        );
-        const uploadResult = await uploadLectureVideo(
-          fileToUpload,
-          setIsUploadingVideo,
-          (percent) => {
-            setUploadProgress(percent);
-            toast.custom(
-              renderUploadToast({
-                progress: percent,
-                onCancel: () => {
-                  openCancelUploadModal("add");
-                },
-              }),
-              { id: toastId, duration: Infinity }
-            );
-          },
-          uploadAbortRef
-        );
+        // Generate unique upload ID
+        const uploadId = `upload-${Date.now()}-${uploadIdCounterRef.current++}`;
+
+        // Create upload data
+        const uploadData = {
+          file: fileToUpload,
+          progress: 0,
+          controller: null,
+          status: "uploading",
+          fileName: fileToUpload.name,
+        };
+
+        // Initialize upload in queue first
+        setUploadQueue((prev) => {
+          const newQueue = new Map(prev);
+          newQueue.set(uploadId, uploadData);
+          return newQueue;
+        });
+
+        const toastId = toast.custom(renderUploadToast(uploadId, uploadData), {
+          duration: Infinity,
+        });
+
+        const uploadResult = await uploadLectureVideo(uploadId, fileToUpload, toastId, fileToUpload.name);
 
         if (!uploadResult) {
           toast.dismiss(toastId);
@@ -558,6 +595,14 @@ export default function CourseEditor() {
 
         videoUrl = uploadResult.url;
         videoPublicId = uploadResult.publicId || videoPublicId;
+
+        // Remove from queue after successful upload
+        setUploadQueue((prev) => {
+          const newQueue = new Map(prev);
+          newQueue.delete(uploadId);
+          return newQueue;
+        });
+
         toast.dismiss(toastId);
         toast.success("Video uploaded");
       }
@@ -666,17 +711,50 @@ export default function CourseEditor() {
       let duration = editLectureData.duration || 0;
 
       if (editLectureFile) {
-        const uploadResult = await uploadLectureVideo(
-          editLectureFile,
-          setIsUploadingEditVideo,
-          setEditUploadProgress,
-          editUploadAbortRef
-        );
+        // Generate unique upload ID
+        const uploadId = `upload-edit-${Date.now()}-${uploadIdCounterRef.current++}`;
 
-        if (!uploadResult) return;
+        // Create upload data
+        const uploadData = {
+          file: editLectureFile,
+          progress: 0,
+          controller: null,
+          status: "uploading",
+          fileName: editLectureFile.name,
+        };
+
+        // Initialize upload in queue first
+        setUploadQueue((prev) => {
+          const newQueue = new Map(prev);
+          newQueue.set(uploadId, uploadData);
+          return newQueue;
+        });
+
+        const toastId = toast.custom(renderUploadToast(uploadId, uploadData), {
+          duration: Infinity,
+        });
+
+        const uploadResult = await uploadLectureVideo(uploadId, editLectureFile, toastId, editLectureFile.name);
+
+        if (!uploadResult) {
+          toast.dismiss(toastId);
+          toast.error("Upload canceled");
+          return;
+        }
 
         videoUrl = uploadResult.url;
         videoPublicId = uploadResult.publicId || videoPublicId;
+
+        // Remove from queue after successful upload
+        setUploadQueue((prev) => {
+          const newQueue = new Map(prev);
+          newQueue.delete(uploadId);
+          return newQueue;
+        });
+
+        toast.dismiss(toastId);
+        toast.success("Video uploaded");
+
         setEditLectureData((prev) => ({
           ...prev,
           videoUrl,
@@ -1227,7 +1305,7 @@ export default function CourseEditor() {
 
                 <div>
                   <label className="block text-sm font-bold text-gray-700 mb-2">
-                    What you'll learn
+                    {"What you'll learn"}
                   </label>
                   <div className="space-y-3">
                     {detailsData.learningPoints.map((point, index) => (
@@ -1494,40 +1572,17 @@ export default function CourseEditor() {
                           {editLectureFile ? "Selected" : "Current"}
                         </span>
                       </div>
-                      {isUploadingEditVideo && (
-                        <div className="mt-3 space-y-2">
-                          <div className="flex items-center justify-between text-xs font-bold text-purple-600">
-                            <span>Uploading... {editUploadProgress}%</span>
-                            <button
-                              type="button"
-                              onClick={cancelEditUpload}
-                              className="text-red-600 hover:text-red-700"
-                            >
-                              Cancel
-                            </button>
-                          </div>
-                          <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
-                            <div
-                              className="bg-purple-600 h-2.5 transition-all duration-300 ease-out"
-                              style={{ width: `${editUploadProgress}%` }}
-                            ></div>
-                          </div>
-                        </div>
-                      )}
-                      {!isUploadingEditVideo && (
-                        <div className="mt-3">
-                          <label className="inline-flex items-center gap-2 text-xs font-bold text-purple-600 cursor-pointer">
-                            <input
-                              type="file"
-                              accept="video/*"
-                              className="hidden"
-                              onChange={handleEditVideoFileSelect}
-                              disabled={isUploadingEditVideo}
-                            />
-                            Change file
-                          </label>
-                        </div>
-                      )}
+                      <div className="mt-3">
+                        <label className="inline-flex items-center gap-2 text-xs font-bold text-purple-600 cursor-pointer">
+                          <input
+                            type="file"
+                            accept="video/*"
+                            className="hidden"
+                            onChange={handleEditVideoFileSelect}
+                          />
+                          Change file
+                        </label>
+                      </div>
                     </div>
                   ) : (
                     <div className="relative border-2 border-dashed border-gray-200 rounded-xl p-4 text-center hover:bg-gray-50 transition cursor-pointer">
@@ -1536,7 +1591,6 @@ export default function CourseEditor() {
                         accept="video/*"
                         className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
                         onChange={handleEditVideoFileSelect}
-                        disabled={isUploadingEditVideo}
                       />
                       <div className="text-gray-500 text-sm">
                         <FiUploadCloud
@@ -1591,8 +1645,7 @@ export default function CourseEditor() {
                 </button>
                 <button
                   type="submit"
-                  disabled={isUploadingEditVideo}
-                  className="px-5 py-2.5 rounded-xl font-bold bg-purple-600 text-white hover:bg-purple-700 transition shadow-lg disabled:opacity-70 disabled:cursor-not-allowed"
+                  className="px-5 py-2.5 rounded-xl font-bold bg-purple-600 text-white hover:bg-purple-700 transition shadow-lg"
                 >
                   Save Changes
                 </button>
@@ -1767,40 +1820,17 @@ export default function CourseEditor() {
                           {lectureData.videoUrl ? "Uploaded" : "Ready"}
                         </span>
                       </div>
-                      {isUploadingVideo && (
-                        <div className="mt-3 space-y-2">
-                          <div className="flex items-center justify-between text-xs font-bold text-purple-600">
-                            <span>Uploading... {uploadProgress}%</span>
-                            <button
-                              type="button"
-                              onClick={cancelAddUpload}
-                              className="text-red-600 hover:text-red-700"
-                            >
-                              Cancel
-                            </button>
-                          </div>
-                          <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
-                            <div
-                              className="bg-purple-600 h-2.5 transition-all duration-300 ease-out"
-                              style={{ width: `${uploadProgress}%` }}
-                            ></div>
-                          </div>
-                        </div>
-                      )}
-                      {!isUploadingVideo && (
-                        <div className="mt-3">
-                          <label className="inline-flex items-center gap-2 text-xs font-bold text-purple-600 cursor-pointer">
-                            <input
-                              type="file"
-                              accept="video/*"
-                              className="hidden"
-                              onChange={handleVideoFileSelect}
-                              disabled={isUploadingVideo}
-                            />
-                            Change file
-                          </label>
-                        </div>
-                      )}
+                      <div className="mt-3">
+                        <label className="inline-flex items-center gap-2 text-xs font-bold text-purple-600 cursor-pointer">
+                          <input
+                            type="file"
+                            accept="video/*"
+                            className="hidden"
+                            onChange={handleVideoFileSelect}
+                          />
+                          Change file
+                        </label>
+                      </div>
                     </div>
                   ) : (
                     // Show upload area if no video yet
@@ -1820,34 +1850,17 @@ export default function CourseEditor() {
                           accept="video/*"
                           className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
                           onChange={handleVideoFileSelect}
-                          disabled={isUploadingVideo}
                         />
-                        {isUploadingVideo ? (
-                          <div className="space-y-2">
-                            <div className="flex items-center justify-center gap-2 text-purple-600 font-bold text-sm">
-                              <span className="animate-spin h-4 w-4 border-2 border-purple-600 border-t-transparent rounded-full"></span>
-                              Uploading video... {uploadProgress}%
-                            </div>
-                            {/* Progress Bar */}
-                            <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
-                              <div
-                                className="bg-purple-600 h-2.5 transition-all duration-300 ease-out"
-                                style={{ width: `${uploadProgress}%` }}
-                              ></div>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="text-gray-500 text-sm">
-                            <FiUploadCloud
-                              className="mx-auto mb-1 text-gray-400"
-                              size={24}
-                            />
-                            <span className="font-bold text-purple-600">
-                              Click to upload
-                            </span>{" "}
-                            MP4/WebM
-                          </div>
-                        )}
+                        <div className="text-gray-500 text-sm">
+                          <FiUploadCloud
+                            className="mx-auto mb-1 text-gray-400"
+                            size={24}
+                          />
+                          <span className="font-bold text-purple-600">
+                            Click to upload
+                          </span>{" "}
+                          MP4/WebM
+                        </div>
                       </div>
                     </div>
                   )}
@@ -1891,8 +1904,7 @@ export default function CourseEditor() {
                 </button>
                 <button
                   type="submit"
-                  disabled={isUploadingVideo}
-                  className="px-5 py-2.5 rounded-xl font-bold bg-purple-600 text-white hover:bg-purple-700 transition shadow-lg disabled:opacity-70 disabled:cursor-not-allowed"
+                  className="px-5 py-2.5 rounded-xl font-bold bg-purple-600 text-white hover:bg-purple-700 transition shadow-lg"
                 >
                   Add Lecture
                 </button>
@@ -1932,7 +1944,7 @@ export default function CourseEditor() {
         </div>
       )}
 
-      {cancelUploadTarget && (
+      {cancelUploadId && (
         <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
             <h3 className="text-lg font-bold text-gray-900 mb-2">

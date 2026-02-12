@@ -57,8 +57,8 @@ const limiter = rateLimit({
 app.use("/api", limiter);
 
 // Body parser middleware
-app.use(express.json({ limit: "10kb" }));
-app.use(express.urlencoded({ extended: true, limit: "10kb" }));
+app.use(express.json({ limit: "500mb" }));
+app.use(express.urlencoded({ extended: true, limit: "500mb" }));
 
 // Health check route
 app.get("/health", (req, res) => {
