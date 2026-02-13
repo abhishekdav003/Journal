@@ -60,11 +60,12 @@ export const deleteLecture = (id, lectureId) =>
 export const archiveCourse = (id) => API.patch(`/courses/${id}/archive`);
 
 // Video Upload
-export const uploadVideo = (formData, onUploadProgress) =>
+export const uploadVideo = (formData, onUploadProgress, options = {}) =>
   API.post("/videos/upload", formData, {
     headers: { "Content-Type": "multipart/form-data" },
     timeout: 1800000, // 30 minutes for large videos
     onUploadProgress: onUploadProgress,
+    ...options,
   });
 export const uploadThumbnail = (formData) =>
   API.post("/videos/thumbnail", formData, {

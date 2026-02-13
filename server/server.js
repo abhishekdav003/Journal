@@ -57,8 +57,8 @@ const limiter = rateLimit({
 app.use("/api", limiter);
 
 // Body parser middleware
-app.use(express.json({ limit: "10kb" }));
-app.use(express.urlencoded({ extended: true, limit: "10kb" }));
+app.use(express.json({ limit: "500mb" }));
+app.use(express.urlencoded({ extended: true, limit: "500mb" }));
 
 // Health check route
 app.get("/health", (req, res) => {
@@ -95,8 +95,10 @@ const server = app.listen(PORT, () => {
 
 // Handle unhandled promise rejections
 process.on("unhandledRejection", (err) => {
-  logger.error(`Unhandled Rejection: ${err.message}`, err);
-  server.close(() => process.exit(1));
+  logger.error("Unhandled Rejection:", err);
+  if (process.env.NODE_ENV === "production") {
+    server.close(() => process.exit(1));
+  }
 });
 
 // Handle uncaught exceptions

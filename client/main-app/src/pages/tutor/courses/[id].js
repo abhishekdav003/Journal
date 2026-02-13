@@ -36,6 +36,7 @@ export default function CourseEditor() {
   const { id } = router.query;
   const thumbnailInputRef = useRef(null);
   const videoModalRef = useRef(null);
+  const uploadIdCounterRef = useRef(0);
 
   const [course, setCourse] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -57,12 +58,12 @@ export default function CourseEditor() {
     description: "",
     videoUrl: "",
     videoPublicId: "",
+    videoName: "",
     duration: 0,
     isPreview: false,
   });
-  const [isUploadingVideo, setIsUploadingVideo] = useState(false);
   const [isUploadingThumb, setIsUploadingThumb] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
+  const [lectureFile, setLectureFile] = useState(null);
   const [confirmDialog, setConfirmDialog] = useState({
     open: false,
     type: null,
@@ -71,10 +72,69 @@ export default function CourseEditor() {
     message: "",
   });
   const [videoPreview, setVideoPreview] = useState(null);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [detailsData, setDetailsData] = useState({
+    title: "",
+    tagline: "",
+    description: "",
+    learningPoints: [""],
+    requirements: [""],
+    category: "programming",
+    level: "beginner",
+    price: 0,
+  });
+  const [isSavingDetails, setIsSavingDetails] = useState(false);
+  const [isEditLectureModalOpen, setIsEditLectureModalOpen] = useState(false);
+  const [editingLectureId, setEditingLectureId] = useState(null);
+  const [editLectureData, setEditLectureData] = useState({
+    title: "",
+    description: "",
+    videoUrl: "",
+    videoPublicId: "",
+    videoName: "",
+    duration: 0,
+    isPreview: false,
+  });
+  const [editLectureFile, setEditLectureFile] = useState(null);
+
+  // Upload Queue for Multiple Simultaneous Uploads
+  const [uploadQueue, setUploadQueue] = useState(new Map());
+  const [cancelUploadId, setCancelUploadId] = useState(null);
 
   useEffect(() => {
     if (id) fetchCourseData(id);
   }, [id]);
+
+  useEffect(() => {
+    const isAnyModalOpen =
+      isModuleModalOpen ||
+      isEditModuleModalOpen ||
+      isLectureModalOpen ||
+      isEditLectureModalOpen ||
+      isDetailsModalOpen ||
+      confirmDialog.open ||
+      !!videoPreview ||
+      !!cancelUploadId;
+
+    if (isAnyModalOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [
+    isModuleModalOpen,
+    isEditModuleModalOpen,
+    isLectureModalOpen,
+    isEditLectureModalOpen,
+    isDetailsModalOpen,
+    confirmDialog.open,
+    videoPreview,
+    cancelUploadId,
+  ]);
 
   // Extract duration from video element in modal as fallback
   useEffect(() => {
@@ -108,6 +168,18 @@ export default function CourseEditor() {
       toast.error("Could not load course details");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const getVideoDisplayName = (url, fallback = "Uploaded video") => {
+    if (!url) return fallback;
+    const cleanUrl = url.split("?")[0];
+    const lastSegment = cleanUrl.split("/").pop();
+    if (!lastSegment) return fallback;
+    try {
+      return decodeURIComponent(lastSegment);
+    } catch (err) {
+      return lastSegment;
     }
   };
 
@@ -174,6 +246,148 @@ export default function CourseEditor() {
     });
   };
 
+  const uploadLectureVideo = async (uploadId, file, toastId, fileName) => {
+    const formData = new FormData();
+    formData.append("video", file);
+
+    const controller = new AbortController();
+
+    // Update queue with controller
+    setUploadQueue((prev) => {
+      const newQueue = new Map(prev);
+      const upload = newQueue.get(uploadId);
+      if (upload) {
+        newQueue.set(uploadId, { ...upload, controller });
+      }
+      return newQueue;
+    });
+
+    try {
+      const res = await uploadVideo(
+        formData,
+        (progressEvent) => {
+          const percentCompleted = Math.round(
+            (progressEvent.loaded * 100) / progressEvent.total
+          );
+          
+          const uploadData = {
+            file,
+            progress: percentCompleted,
+            controller,
+            status: "uploading",
+            fileName,
+          };
+          
+          setUploadQueue((prev) => {
+            const newQueue = new Map(prev);
+            newQueue.set(uploadId, uploadData);
+            return newQueue;
+          });
+          
+          // Update the toast with current data
+          toast.custom(renderUploadToast(uploadId, uploadData), {
+            id: toastId,
+            duration: Infinity,
+          });
+        },
+        { signal: controller.signal }
+      );
+
+      const url =
+        res.data.data?.video?.url || res.data.data?.url || res.data.url;
+      const publicId =
+        res.data.data?.video?.publicId ||
+        res.data.data?.video?.public_id ||
+        res.data.publicId;
+
+      // Mark as completed
+      setUploadQueue((prev) => {
+        const newQueue = new Map(prev);
+        newQueue.delete(uploadId);
+        return newQueue;
+      });
+
+      return { url, publicId };
+    } catch (err) {
+      if (err?.code === "ERR_CANCELED" || err?.name === "CanceledError") {
+        // Mark as canceled
+        setUploadQueue((prev) => {
+          const newQueue = new Map(prev);
+          newQueue.delete(uploadId);
+          return newQueue;
+        });
+        toast.error("Upload canceled");
+        return null;
+      }
+
+      // Mark as failed
+      setUploadQueue((prev) => {
+        const newQueue = new Map(prev);
+        newQueue.delete(uploadId);
+        return newQueue;
+      });
+      throw err;
+    }
+  };
+
+  const cancelUpload = (uploadId) => {
+    const upload = uploadQueue.get(uploadId);
+    if (upload?.controller) {
+      upload.controller.abort();
+    }
+    setUploadQueue((prev) => {
+      const newQueue = new Map(prev);
+      newQueue.delete(uploadId);
+      return newQueue;
+    });
+  };
+
+  const openCancelUploadModal = (uploadId) => {
+    setCancelUploadId(uploadId);
+  };
+
+  const closeCancelUploadModal = () => {
+    setCancelUploadId(null);
+  };
+
+  const confirmCancelUpload = () => {
+    if (cancelUploadId) {
+      cancelUpload(cancelUploadId);
+    }
+    closeCancelUploadModal();
+  };
+
+  const renderUploadToast = (uploadId, uploadData = null) => {
+    const upload = uploadData || uploadQueue.get(uploadId);
+    if (!upload) return null;
+
+    return (
+      <div className="bg-white border border-gray-200 rounded-xl shadow-lg px-4 py-3 w-full max-w-sm">
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-sm font-bold text-gray-900">
+            Uploading {upload.fileName}... {upload.progress}%
+          </p>
+          <button
+            className="text-xs font-bold text-red-600 hover:text-red-700"
+            onClick={() => openCancelUploadModal(uploadId)}
+            type="button"
+          >
+            Cancel
+          </button>
+        </div>
+        <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
+          <div
+            className="bg-purple-600 h-2 transition-all duration-300 ease-out"
+            style={{ width: `${upload.progress}%` }}
+          ></div>
+        </div>
+        <p className="text-[11px] text-gray-500 mt-2">
+          Cancel will stop the upload. Your lecture will not be saved.
+        </p>
+      </div>
+    );
+  };
+
   // 2. Video Upload Handler (Lecture Modal)
   const handleVideoFileSelect = async (e) => {
     const file = e.target.files[0];
@@ -185,7 +399,7 @@ export default function CourseEditor() {
       toast("Uploading large file, please wait...", { icon: "⏳" });
     }
 
-    // Extract duration from the video file before uploading
+    // Extract duration from the video file for saving
     let fileDuration = 0;
     try {
       fileDuration = await getVideoDuration(file);
@@ -193,42 +407,12 @@ export default function CourseEditor() {
       console.warn("Could not extract duration from file:", err);
     }
 
-    const formData = new FormData();
-    formData.append("video", file);
-
-    try {
-      setIsUploadingVideo(true);
-      setUploadProgress(0);
-
-      const res = await uploadVideo(formData, (progressEvent) => {
-        const percentCompleted = Math.round(
-          (progressEvent.loaded * 100) / progressEvent.total
-        );
-        setUploadProgress(percentCompleted);
-      });
-
-      const url =
-        res.data.data?.video?.url || res.data.data?.url || res.data.url;
-      const publicId =
-        res.data.data?.video?.publicId ||
-        res.data.data?.video?.public_id ||
-        res.data.publicId;
-      const duration = fileDuration || 0;
-
-      setLectureData((prev) => ({
-        ...prev,
-        videoUrl: url,
-        videoPublicId: publicId || prev.videoPublicId,
-        duration,
-      }));
-      toast.success("Video uploaded successfully!");
-    } catch (err) {
-      console.error(err);
-      toast.error("Failed to upload video");
-    } finally {
-      setIsUploadingVideo(false);
-      setUploadProgress(0);
-    }
+    setLectureFile(file);
+    setLectureData((prev) => ({
+      ...prev,
+      videoName: file.name,
+      duration: fileDuration || prev.duration,
+    }));
   };
 
   // 3. Publish Toggle
@@ -323,11 +507,13 @@ export default function CourseEditor() {
   // 5. Add Lecture
   const openLectureModal = (moduleId) => {
     setActiveModuleId(moduleId);
+    setLectureFile(null);
     setLectureData({
       title: "",
       description: "",
       videoUrl: "",
       videoPublicId: "",
+      videoName: "",
       duration: 0,
       isPreview: false,
     });
@@ -340,31 +526,98 @@ export default function CourseEditor() {
       toast.error("Please select a section to add this video");
       return;
     }
-    if (!lectureData.title.trim() || !lectureData.videoUrl.trim()) {
-      toast.error("Please add both title and video");
+    if (!lectureData.title.trim()) {
+      toast.error("Please add a lecture title");
       return;
     }
     try {
-      await addLecture(id, {
+      const payload = {
         title: lectureData.title,
         description: lectureData.description,
-        videoUrl: lectureData.videoUrl,
-        videoPublicId: lectureData.videoPublicId,
-        duration: lectureData.duration,
         isPreview: lectureData.isPreview,
         moduleId: activeModuleId,
-      });
-      toast.success("Lecture added");
+        duration: lectureData.duration || 0,
+      };
+      const fileToUpload = lectureFile;
+
+      setIsLectureModalOpen(false);
+      setLectureFile(null);
       setLectureData({
         title: "",
         description: "",
         videoUrl: "",
         videoPublicId: "",
+        videoName: "",
         duration: 0,
         isPreview: false,
       });
+
+      let videoUrl = lectureData.videoUrl;
+      let videoPublicId = lectureData.videoPublicId;
+      let duration = payload.duration;
+
+      if (!videoUrl) {
+        if (!fileToUpload) {
+          toast.error("Please select a video");
+          return;
+        }
+
+        // Generate unique upload ID
+        const uploadId = `upload-${Date.now()}-${uploadIdCounterRef.current++}`;
+
+        // Create upload data
+        const uploadData = {
+          file: fileToUpload,
+          progress: 0,
+          controller: null,
+          status: "uploading",
+          fileName: fileToUpload.name,
+        };
+
+        // Initialize upload in queue first
+        setUploadQueue((prev) => {
+          const newQueue = new Map(prev);
+          newQueue.set(uploadId, uploadData);
+          return newQueue;
+        });
+
+        const toastId = toast.custom(renderUploadToast(uploadId, uploadData), {
+          duration: Infinity,
+        });
+
+        const uploadResult = await uploadLectureVideo(uploadId, fileToUpload, toastId, fileToUpload.name);
+
+        if (!uploadResult) {
+          toast.dismiss(toastId);
+          toast.error("Upload canceled");
+          return;
+        }
+
+        videoUrl = uploadResult.url;
+        videoPublicId = uploadResult.publicId || videoPublicId;
+
+        // Remove from queue after successful upload
+        setUploadQueue((prev) => {
+          const newQueue = new Map(prev);
+          newQueue.delete(uploadId);
+          return newQueue;
+        });
+
+        toast.dismiss(toastId);
+        toast.success("Video uploaded");
+      }
+
+      await addLecture(id, {
+        title: payload.title,
+        description: payload.description,
+        videoUrl,
+        videoPublicId,
+        duration,
+        isPreview: payload.isPreview,
+        moduleId: payload.moduleId,
+      });
+      toast.success("Lecture added");
       fetchCourseData(id);
-      setIsLectureModalOpen(false);
     } catch (err) {
       console.error(err);
       toast.error("Failed to add lecture");
@@ -402,6 +655,193 @@ export default function CourseEditor() {
     } catch (err) {
       console.error(err);
       toast.error("Failed to update preview");
+    }
+  };
+
+  const openEditLectureModal = (lecture) => {
+    setEditingLectureId(lecture._id);
+    setEditLectureFile(null);
+    setEditLectureData({
+      title: lecture.title || "",
+      description: lecture.description || "",
+      videoUrl: lecture.videoUrl || "",
+      videoPublicId: lecture.videoPublicId || "",
+      videoName: getVideoDisplayName(lecture.videoUrl),
+      duration: lecture.duration || 0,
+      isPreview: !!lecture.isPreview,
+    });
+    setIsEditLectureModalOpen(true);
+  };
+
+  const handleEditVideoFileSelect = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.size > 100 * 1024 * 1024) {
+      toast("Uploading large file, please wait...", { icon: "⏳" });
+    }
+
+    let fileDuration = 0;
+    try {
+      fileDuration = await getVideoDuration(file);
+    } catch (err) {
+      console.warn("Could not extract duration from file:", err);
+    }
+
+    setEditLectureFile(file);
+    setEditLectureData((prev) => ({
+      ...prev,
+      videoName: file.name,
+      duration: fileDuration || prev.duration || 0,
+    }));
+  };
+
+  const handleUpdateLecture = async (e) => {
+    e.preventDefault();
+    if (!editingLectureId) return;
+
+    if (!editLectureData.title.trim()) {
+      toast.error("Lecture title is required");
+      return;
+    }
+
+    try {
+      let videoUrl = editLectureData.videoUrl;
+      let videoPublicId = editLectureData.videoPublicId;
+      let duration = editLectureData.duration || 0;
+
+      if (editLectureFile) {
+        // Generate unique upload ID
+        const uploadId = `upload-edit-${Date.now()}-${uploadIdCounterRef.current++}`;
+
+        // Create upload data
+        const uploadData = {
+          file: editLectureFile,
+          progress: 0,
+          controller: null,
+          status: "uploading",
+          fileName: editLectureFile.name,
+        };
+
+        // Initialize upload in queue first
+        setUploadQueue((prev) => {
+          const newQueue = new Map(prev);
+          newQueue.set(uploadId, uploadData);
+          return newQueue;
+        });
+
+        const toastId = toast.custom(renderUploadToast(uploadId, uploadData), {
+          duration: Infinity,
+        });
+
+        const uploadResult = await uploadLectureVideo(uploadId, editLectureFile, toastId, editLectureFile.name);
+
+        if (!uploadResult) {
+          toast.dismiss(toastId);
+          toast.error("Upload canceled");
+          return;
+        }
+
+        videoUrl = uploadResult.url;
+        videoPublicId = uploadResult.publicId || videoPublicId;
+
+        // Remove from queue after successful upload
+        setUploadQueue((prev) => {
+          const newQueue = new Map(prev);
+          newQueue.delete(uploadId);
+          return newQueue;
+        });
+
+        toast.dismiss(toastId);
+        toast.success("Video uploaded");
+
+        setEditLectureData((prev) => ({
+          ...prev,
+          videoUrl,
+          videoPublicId,
+        }));
+      }
+
+      if (!videoUrl || !videoUrl.trim()) {
+        toast.error("Please upload a video");
+        return;
+      }
+
+      await updateLecture(id, editingLectureId, {
+        title: editLectureData.title,
+        description: editLectureData.description,
+        videoUrl,
+        videoPublicId,
+        duration,
+        isPreview: editLectureData.isPreview,
+      });
+      toast.success("Lecture updated");
+      setEditLectureFile(null);
+      setIsEditLectureModalOpen(false);
+      fetchCourseData(id);
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.message || "Failed to update lecture");
+    }
+  };
+
+  const openDetailsModal = () => {
+    if (!course) return;
+    setDetailsData({
+      title: course.title || "",
+      tagline: course.tagline || "",
+      description: course.description || "",
+      learningPoints:
+        course.learningPoints && course.learningPoints.length > 0
+          ? course.learningPoints
+          : [""],
+      requirements:
+        course.requirements && course.requirements.length > 0
+          ? course.requirements
+          : [""],
+      category: course.category || "programming",
+      level: course.level || "beginner",
+      price: typeof course.price === "number" ? course.price : 0,
+    });
+    setIsDetailsModalOpen(true);
+  };
+
+  const handleUpdateDetails = async (e) => {
+    e.preventDefault();
+
+    if (!detailsData.title.trim()) {
+      toast.error("Title is required");
+      return;
+    }
+
+    if (!detailsData.description.trim()) {
+      toast.error("Description is required");
+      return;
+    }
+
+    const cleanedLearningPoints = detailsData.learningPoints
+      .map((point) => point.trim())
+      .filter(Boolean);
+    const cleanedRequirements = detailsData.requirements
+      .map((req) => req.trim())
+      .filter(Boolean);
+
+    setIsSavingDetails(true);
+    try {
+      const res = await updateCourse(id, {
+        ...detailsData,
+        price: Number(detailsData.price) || 0,
+        learningPoints: cleanedLearningPoints,
+        requirements: cleanedRequirements,
+      });
+      setCourse(res.data.data?.course || res.data.data);
+      toast.success("Course details updated");
+      setIsDetailsModalOpen(false);
+    } catch (err) {
+      console.error(err);
+      toast.error(err.response?.data?.message || "Failed to update details");
+    } finally {
+      setIsSavingDetails(false);
     }
   };
 
@@ -655,11 +1095,7 @@ export default function CourseEditor() {
                                     : "Preview Off"}
                                 </button>
                                 <button
-                                  onClick={() =>
-                                    toast("Edit lecture coming soon", {
-                                      icon: "🛠️",
-                                    })
-                                  }
+                                  onClick={() => openEditLectureModal(lecture)}
                                   className="p-2 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg transition"
                                 >
                                   <FiEdit2 size={16} />
@@ -782,7 +1218,10 @@ export default function CourseEditor() {
                 <span className="text-2xl font-black text-gray-900">
                   ₹{course.price}
                 </span>
-                <button className="text-purple-600 text-xs font-bold hover:underline">
+                <button
+                  onClick={openDetailsModal}
+                  className="text-purple-600 text-xs font-bold hover:underline"
+                >
                   Edit Details
                 </button>
               </div>
@@ -790,6 +1229,431 @@ export default function CourseEditor() {
           </div>
         </div>
       </div>
+
+      {isDetailsModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold text-gray-900">
+                Edit Course Details
+              </h3>
+              <button
+                onClick={() => setIsDetailsModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <FiX size={24} />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateDetails} className="space-y-6">
+              <div className="max-h-[65vh] overflow-y-auto pr-1 space-y-6">
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                    Course Title
+                  </label>
+                  <input
+                    type="text"
+                    className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none transition text-gray-900 placeholder-gray-400 bg-white"
+                    placeholder="e.g. Master Next.js 14 from Scratch"
+                    value={detailsData.title}
+                    onChange={(e) =>
+                      setDetailsData((prev) => ({
+                        ...prev,
+                        title: e.target.value,
+                      }))
+                    }
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                    Short Tagline
+                  </label>
+                  <input
+                    type="text"
+                    className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none transition text-gray-900 placeholder-gray-400 bg-white"
+                    placeholder="A short, punchy summary of the course"
+                    value={detailsData.tagline}
+                    onChange={(e) =>
+                      setDetailsData((prev) => ({
+                        ...prev,
+                        tagline: e.target.value,
+                      }))
+                    }
+                    maxLength={200}
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                    Description
+                  </label>
+                  <textarea
+                    className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none transition text-gray-900 placeholder-gray-400 bg-white resize-none h-28"
+                    placeholder="What will students learn in this course?"
+                    value={detailsData.description}
+                    onChange={(e) =>
+                      setDetailsData((prev) => ({
+                        ...prev,
+                        description: e.target.value,
+                      }))
+                    }
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                    {"What you'll learn"}
+                  </label>
+                  <div className="space-y-3">
+                    {detailsData.learningPoints.map((point, index) => (
+                      <div key={index} className="flex items-center gap-3">
+                        <input
+                          type="text"
+                          className="flex-1 p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none transition text-gray-900 placeholder-gray-400 bg-white"
+                          placeholder={`Outcome ${index + 1}`}
+                          value={point}
+                          onChange={(e) => {
+                            const updated = [...detailsData.learningPoints];
+                            updated[index] = e.target.value;
+                            setDetailsData((prev) => ({
+                              ...prev,
+                              learningPoints: updated,
+                            }));
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (detailsData.learningPoints.length === 1) return;
+                            const updated = detailsData.learningPoints.filter(
+                              (_, idx) => idx !== index
+                            );
+                            setDetailsData((prev) => ({
+                              ...prev,
+                              learningPoints: updated,
+                            }));
+                          }}
+                          className="px-3 py-2 text-sm font-bold text-gray-500 hover:text-red-600 transition"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setDetailsData((prev) => ({
+                        ...prev,
+                        learningPoints: [...prev.learningPoints, ""],
+                      }))
+                    }
+                    className="mt-3 text-sm font-bold text-purple-600 hover:text-purple-700 transition"
+                  >
+                    + Add another outcome
+                  </button>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                    Requirements (Optional)
+                  </label>
+                  <div className="space-y-3">
+                    {detailsData.requirements.map((req, index) => (
+                      <div key={index} className="flex items-center gap-3">
+                        <input
+                          type="text"
+                          className="flex-1 p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none transition text-gray-900 placeholder-gray-400 bg-white"
+                          placeholder={`Requirement ${index + 1}`}
+                          value={req}
+                          onChange={(e) => {
+                            const updated = [...detailsData.requirements];
+                            updated[index] = e.target.value;
+                            setDetailsData((prev) => ({
+                              ...prev,
+                              requirements: updated,
+                            }));
+                          }}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => {
+                            if (detailsData.requirements.length === 1) return;
+                            const updated = detailsData.requirements.filter(
+                              (_, idx) => idx !== index
+                            );
+                            setDetailsData((prev) => ({
+                              ...prev,
+                              requirements: updated,
+                            }));
+                          }}
+                          className="px-3 py-2 text-sm font-bold text-gray-500 hover:text-red-600 transition"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setDetailsData((prev) => ({
+                        ...prev,
+                        requirements: [...prev.requirements, ""],
+                      }))
+                    }
+                    className="mt-3 text-sm font-bold text-purple-600 hover:text-purple-700 transition"
+                  >
+                    + Add another requirement
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-2">
+                      Category
+                    </label>
+                    <select
+                      className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none transition bg-white text-gray-900 cursor-pointer"
+                      value={detailsData.category}
+                      onChange={(e) =>
+                        setDetailsData((prev) => ({
+                          ...prev,
+                          category: e.target.value,
+                        }))
+                      }
+                    >
+                      <option value="programming">Programming</option>
+                      <option value="design">Design</option>
+                      <option value="business">Business</option>
+                      <option value="marketing">Marketing</option>
+                      <option value="photography">Photography</option>
+                      <option value="music">Music</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-bold text-gray-700 mb-2">
+                      Level
+                    </label>
+                    <select
+                      className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none transition bg-white text-gray-900 cursor-pointer"
+                      value={detailsData.level}
+                      onChange={(e) =>
+                        setDetailsData((prev) => ({
+                          ...prev,
+                          level: e.target.value,
+                        }))
+                      }
+                    >
+                      <option value="beginner">Beginner</option>
+                      <option value="intermediate">Intermediate</option>
+                      <option value="advanced">Advanced</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                    Price (INR)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none transition text-gray-900 placeholder-gray-400 bg-white"
+                    placeholder="0 for Free"
+                    value={detailsData.price}
+                    onChange={(e) =>
+                      setDetailsData((prev) => ({
+                        ...prev,
+                        price: e.target.value,
+                      }))
+                    }
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsDetailsModalOpen(false)}
+                  className="px-5 py-2.5 rounded-xl font-bold text-gray-600 hover:bg-gray-100 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSavingDetails}
+                  className="px-5 py-2.5 rounded-xl font-bold bg-purple-600 text-white hover:bg-purple-700 transition shadow-lg disabled:opacity-70 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {isSavingDetails ? (
+                    <>
+                      <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></span>
+                      Saving...
+                    </>
+                  ) : (
+                    "Save Changes"
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {isEditLectureModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold text-gray-900">Edit Lecture</h3>
+              <button
+                onClick={() => setIsEditLectureModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <FiX size={24} />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateLecture}>
+              <div className="space-y-4 mb-6 max-h-96 overflow-y-auto">
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                    Lecture Title
+                  </label>
+                  <input
+                    type="text"
+                    className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none transition text-gray-900 placeholder-gray-400 bg-white"
+                    value={editLectureData.title}
+                    onChange={(e) =>
+                      setEditLectureData((prev) => ({
+                        ...prev,
+                        title: e.target.value,
+                      }))
+                    }
+                    autoFocus
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                    Description (Optional)
+                  </label>
+                  <textarea
+                    className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none transition text-gray-900 placeholder-gray-400 bg-white resize-none h-24"
+                    value={editLectureData.description}
+                    onChange={(e) =>
+                      setEditLectureData((prev) => ({
+                        ...prev,
+                        description: e.target.value,
+                      }))
+                    }
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-bold text-gray-700 mb-2">
+                    Video Source
+                  </label>
+
+                  {editLectureData.videoUrl || editLectureFile ? (
+                    <div className="border border-gray-300 rounded-xl p-3 bg-green-50 mb-3">
+                      <div className="flex items-center gap-2">
+                        <FiVideo className="text-green-500" />
+                        <span className="w-full text-sm text-gray-900 font-medium truncate">
+                          {editLectureFile?.name ||
+                            editLectureData.videoName ||
+                            getVideoDisplayName(editLectureData.videoUrl)}
+                        </span>
+                        <span className="text-xs bg-green-200 text-green-700 px-2 py-1 rounded whitespace-nowrap font-bold">
+                          {editLectureFile ? "Selected" : "Current"}
+                        </span>
+                      </div>
+                      <div className="mt-3">
+                        <label className="inline-flex items-center gap-2 text-xs font-bold text-purple-600 cursor-pointer">
+                          <input
+                            type="file"
+                            accept="video/*"
+                            className="hidden"
+                            onChange={handleEditVideoFileSelect}
+                          />
+                          Change file
+                        </label>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="relative border-2 border-dashed border-gray-200 rounded-xl p-4 text-center hover:bg-gray-50 transition cursor-pointer">
+                      <input
+                        type="file"
+                        accept="video/*"
+                        className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                        onChange={handleEditVideoFileSelect}
+                      />
+                      <div className="text-gray-500 text-sm">
+                        <FiUploadCloud
+                          className="mx-auto mb-1 text-gray-400"
+                          size={24}
+                        />
+                        <span className="font-bold text-purple-600">
+                          Click to upload video
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {editLectureData.videoUrl && (
+                  <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-xl border border-blue-200">
+                    <input
+                      type="checkbox"
+                      id="editIsPreview"
+                      checked={editLectureData.isPreview}
+                      onChange={(e) =>
+                        setEditLectureData((prev) => ({
+                          ...prev,
+                          isPreview: e.target.checked,
+                        }))
+                      }
+                      className="w-4 h-4 text-blue-600 rounded cursor-pointer"
+                    />
+                    <div className="flex-1">
+                      <label
+                        htmlFor="editIsPreview"
+                        className="text-sm font-bold text-gray-900 cursor-pointer"
+                      >
+                        Make this a Preview Video
+                      </label>
+                      <p className="text-xs text-gray-600 mt-1">
+                        Students can watch this video without purchasing the
+                        course
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="flex justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setIsEditLectureModalOpen(false)}
+                  className="px-5 py-2.5 rounded-xl font-bold text-gray-600 hover:bg-gray-100 transition"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2.5 rounded-xl font-bold bg-purple-600 text-white hover:bg-purple-700 transition shadow-lg"
+                >
+                  Save Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* MODAL: Add Module */}
       {isModuleModalOpen && (
@@ -943,20 +1807,30 @@ export default function CourseEditor() {
                     Video Source
                   </label>
 
-                  {lectureData.videoUrl ? (
-                    // Show uploaded video URL as read-only
-                    <div className="flex items-center gap-2 border border-gray-300 rounded-xl p-2 bg-green-50 mb-3">
-                      <FiVideo className="text-green-500 ml-2" />
-                      <input
-                        type="text"
-                        className="w-full p-1 bg-transparent outline-none text-sm text-gray-900 font-medium"
-                        value={lectureData.videoUrl}
-                        disabled
-                        readOnly
-                      />
-                      <span className="text-xs bg-green-200 text-green-700 px-2 py-1 rounded whitespace-nowrap font-bold">
-                        Uploaded
-                      </span>
+                  {lectureFile || lectureData.videoUrl ? (
+                    <div className="border border-gray-300 rounded-xl p-3 bg-green-50 mb-3">
+                      <div className="flex items-center gap-2">
+                        <FiVideo className="text-green-500" />
+                        <span className="w-full text-sm text-gray-900 font-medium truncate">
+                          {lectureFile?.name ||
+                            lectureData.videoName ||
+                            getVideoDisplayName(lectureData.videoUrl)}
+                        </span>
+                        <span className="text-xs bg-green-200 text-green-700 px-2 py-1 rounded whitespace-nowrap font-bold">
+                          {lectureData.videoUrl ? "Uploaded" : "Ready"}
+                        </span>
+                      </div>
+                      <div className="mt-3">
+                        <label className="inline-flex items-center gap-2 text-xs font-bold text-purple-600 cursor-pointer">
+                          <input
+                            type="file"
+                            accept="video/*"
+                            className="hidden"
+                            onChange={handleVideoFileSelect}
+                          />
+                          Change file
+                        </label>
+                      </div>
                     </div>
                   ) : (
                     // Show upload area if no video yet
@@ -976,34 +1850,17 @@ export default function CourseEditor() {
                           accept="video/*"
                           className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
                           onChange={handleVideoFileSelect}
-                          disabled={isUploadingVideo}
                         />
-                        {isUploadingVideo ? (
-                          <div className="space-y-2">
-                            <div className="flex items-center justify-center gap-2 text-purple-600 font-bold text-sm">
-                              <span className="animate-spin h-4 w-4 border-2 border-purple-600 border-t-transparent rounded-full"></span>
-                              Uploading video... {uploadProgress}%
-                            </div>
-                            {/* Progress Bar */}
-                            <div className="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
-                              <div
-                                className="bg-purple-600 h-2.5 transition-all duration-300 ease-out"
-                                style={{ width: `${uploadProgress}%` }}
-                              ></div>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="text-gray-500 text-sm">
-                            <FiUploadCloud
-                              className="mx-auto mb-1 text-gray-400"
-                              size={24}
-                            />
-                            <span className="font-bold text-purple-600">
-                              Click to upload
-                            </span>{" "}
-                            MP4/WebM
-                          </div>
-                        )}
+                        <div className="text-gray-500 text-sm">
+                          <FiUploadCloud
+                            className="mx-auto mb-1 text-gray-400"
+                            size={24}
+                          />
+                          <span className="font-bold text-purple-600">
+                            Click to upload
+                          </span>{" "}
+                          MP4/WebM
+                        </div>
                       </div>
                     </div>
                   )}
@@ -1047,8 +1904,7 @@ export default function CourseEditor() {
                 </button>
                 <button
                   type="submit"
-                  disabled={isUploadingVideo}
-                  className="px-5 py-2.5 rounded-xl font-bold bg-purple-600 text-white hover:bg-purple-700 transition shadow-lg disabled:opacity-70 disabled:cursor-not-allowed"
+                  className="px-5 py-2.5 rounded-xl font-bold bg-purple-600 text-white hover:bg-purple-700 transition shadow-lg"
                 >
                   Add Lecture
                 </button>
@@ -1083,6 +1939,33 @@ export default function CourseEditor() {
               >
                 Delete
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {cancelUploadId && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">
+              Cancel upload?
+            </h3>
+            <p className="text-sm text-gray-600 mb-6">
+              Upload will stop and this lecture will not be saved.
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <div
+                className="px-4 py-2 rounded-lg font-bold text-center text-gray-600 hover:bg-gray-100 transition cursor-pointer"
+                onClick={closeCancelUploadModal}
+              >
+                Keep uploading
+              </div>
+              <div
+                className="px-4 py-2 rounded-lg font-bold text-center bg-red-600 text-white hover:bg-red-700 transition cursor-pointer"
+                onClick={confirmCancelUpload}
+              >
+                Cancel upload
+              </div>
             </div>
           </div>
         </div>
