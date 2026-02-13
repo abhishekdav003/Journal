@@ -27,6 +27,16 @@ const userSchema = new mongoose.Schema(
       minlength: [6, "Password must be at least 6 characters"],
       select: false,
     },
+    phone: {
+      type: String,
+      trim: true,
+      match: [/^\+?[1-9]\d{1,14}$/, "Please provide a valid phone number"],
+    },
+    bio: {
+      type: String,
+      maxlength: [500, "Bio cannot exceed 500 characters"],
+      default: "",
+    },
     role: {
       type: String,
       enum: {
@@ -39,16 +49,22 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    avatar: {
+      type: String,
+    },
+    avatarPublicId: {
+      type: String,
+    },
     resetPasswordToken: String,
     resetPasswordExpire: Date,
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 // Index for faster queries
-userSchema.index({ email: 1 });
+// Email index is created automatically by unique: true
 userSchema.index({ role: 1 });
 
 // Hash password before saving

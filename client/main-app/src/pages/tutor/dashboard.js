@@ -1,101 +1,201 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import { useAuth } from "../../context/AuthContext";
+import { getDashboardStats } from "../../services/apiService";
+import TutorLayout from "../../components/tutor/TutorLayout";
+// Import StatCard component (ensure you created this file from previous steps)
+import StatCard from "../../components/tutor/StatCard"; 
+import { 
+  FiUsers, 
+  FiBookOpen, 
+  FiDollarSign, 
+  FiPlus, 
+  FiArrowUpRight
+} from "react-icons/fi";
+import { 
+  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer 
+} from "recharts";
 
 export default function TutorDashboard() {
   const { user, loading } = useAuth();
   const router = useRouter();
+  
+  const [stats, setStats] = useState({
+    totalCourses: 0,
+    totalStudents: 0,
+    totalRevenue: 0,
+    recentTransactions: [],
+    monthlyData: []
+  });
+  const [dataLoading, setDataLoading] = useState(true);
 
+  // EFFECT 1: Handle Authentication & Redirection
   useEffect(() => {
-    if (!loading && !user) {
-      router.push("/auth/tutor?tab=login");
-    } else if (! loading && user && user.role !== "tutor") {
-      router.push(`/${user.role}/dashboard`);
+    if (!loading) {
+      if (!user) {
+        router.push("/auth/tutor?tab=login");
+      } else if (user.role !== "tutor") {
+        router.push(`/${user.role}/dashboard`);
+      }
     }
   }, [user, loading, router]);
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="w-12 h-12 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
-      </div>
-    );
-  }
+  // EFFECT 2: Fetch Data (Only runs when user is confirmed as tutor)
+  useEffect(() => {
+    // Defined INSIDE useEffect to prevent infinite loops / dependency issues
+    const fetchStats = async () => {
+      try {
+        setDataLoading(true);
+        const res = await getDashboardStats();
+        const data = res.data.data;
+        
+        // Map backend graphData to monthlyData
+        setStats({
+          totalCourses: data.totalCourses || 0,
+          totalStudents: data.totalStudents || 0,
+          totalRevenue: data.totalRevenue || 0,
+          monthlyData: data.graphData || [],
+          recentTransactions: data.recentTransactions || []
+        });
+      } catch (err) {
+        console.error("Failed to load dashboard stats", err);
+        if (err.response && err.response.status === 401) {
+          router.push("/auth/tutor?tab=login");
+        }
+      } finally {
+        setDataLoading(false);
+      }
+    };
 
-  if (!user) return null;
+    if (user && user.role === "tutor") {
+      fetchStats();
+    }
+    // Only re-run if user ID changes (avoids loop if user object reference changes)
+  }, [user?._id, user?.role]); 
+
+  if (loading || !user || user.role !== "tutor") return null;
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="bg-white rounded-2xl shadow-lg p-8 mb-8">
-          <h1 className="text-4xl font-bold text-gray-800 mb-2">
-            Welcome back, {user.name}!  👨‍🏫
+    <TutorLayout>
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between mb-6 sm:mb-8 lg:mb-10 gap-4">
+        <div>
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-gray-900 tracking-tight">
+            Welcome back, <span className="text-purple-600">{user.name?.split(' ')[0]}</span>! 👋
           </h1>
-          <p className="text-gray-600">
-            Tutor Dashboard - Manage your courses and students
-          </p>
+          <p className="text-gray-500 mt-1 sm:mt-2 text-sm sm:text-base lg:text-lg font-medium">Here is a professional overview of your teaching performance.</p>
+        </div>
+        <button 
+          onClick={() => router.push('/tutor/courses/create')}
+          className="flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-4 sm:px-6 py-3 sm:py-3.5 rounded-xl sm:rounded-2xl font-bold transition-all transform active:scale-95 shadow-xl shadow-purple-100 w-full md:w-auto text-sm sm:text-base"
+        >
+          <FiPlus size={20} />
+          Create New Course
+        </button>
+      </div>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8 mb-6 sm:mb-8 lg:mb-10">
+        <StatCard 
+          title="Total Earnings" 
+          value={dataLoading ? '...' : `₹${stats.totalRevenue?.toLocaleString()}`} 
+          icon={FiDollarSign} 
+          color="purple" 
+        />
+        <StatCard 
+          title="Active Learners" 
+          value={dataLoading ? '...' : stats.totalStudents} 
+          icon={FiUsers} 
+          color="blue" 
+        />
+        <StatCard 
+          title="Live Content" 
+          value={dataLoading ? '...' : `${stats.totalCourses} Courses`} 
+          icon={FiBookOpen} 
+          color="orange" 
+        />
+      </div>
+
+      {/* Analytics & Transactions Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
+        {/* Chart Section */}
+        <div className="lg:col-span-2 bg-white p-4 sm:p-6 lg:p-8 rounded-2xl lg:rounded-[2.5rem] shadow-sm border border-gray-100">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 sm:mb-8 gap-4">
+            <h3 className="text-lg sm:text-xl font-black text-gray-900">Revenue Analytics</h3>
+            <select className="bg-gray-50 border-none rounded-xl text-xs sm:text-sm font-bold p-2 outline-none cursor-pointer w-full sm:w-auto">
+              <option>Last 6 Months</option>
+              <option>Last Year</option>
+            </select>
+          </div>
+          <div className="h-64 sm:h-72 w-full overflow-x-auto">
+            {dataLoading ? (
+              <div className="flex items-center justify-center h-full">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-600"></div>
+              </div>
+            ) : stats.monthlyData?.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={stats.monthlyData}>
+                  <defs>
+                    <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f3f4f6" />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#9ca3af', fontSize: 12, fontWeight: 600}} dy={10} />
+                  <YAxis hide />
+                  <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }} cursor={{ stroke: '#8b5cf6', strokeWidth: 2 }} />
+                  <Area type="monotone" dataKey="revenue" stroke="#8b5cf6" strokeWidth={4} fillOpacity={1} fill="url(#colorRev)" />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex flex-col items-center justify-center h-full text-gray-400">
+                <FiDollarSign size={48} className="mb-4 opacity-50" />
+                <p className="text-sm font-medium">No revenue data available yet</p>
+                <p className="text-xs mt-2">Start selling courses to see analytics</p>
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-linear-to-br from-purple-500 to-purple-700 rounded-2xl shadow-lg p-6 text-white">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-purple-100 text-sm mb-1">Total Courses</p>
-                <h3 className="text-4xl font-bold">12</h3>
-              </div>
-              <div className="text-6xl opacity-20">📚</div>
-            </div>
+        {/* Recent Transactions List */}
+        <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-2xl lg:rounded-[2.5rem] shadow-sm border border-gray-100 text-left">
+          <div className="flex items-center justify-between mb-6 sm:mb-8">
+            <h3 className="text-lg sm:text-xl font-black text-gray-900">Recent Sales</h3>
+            <button className="text-purple-600 font-bold text-xs sm:text-sm hover:underline">View All</button>
           </div>
-
-          <div className="bg-linear-to-br from-indigo-500 to-indigo-700 rounded-2xl shadow-lg p-6 text-white">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-indigo-100 text-sm mb-1">Total Students</p>
-                <h3 className="text-4xl font-bold">234</h3>
+          <div className="space-y-4 sm:space-y-6">
+            {dataLoading ? (
+              <div className="flex items-center justify-center py-10">
+                <div className="animate-spin rounded-full h-10 w-10 border-t-2 border-b-2 border-purple-600"></div>
               </div>
-              <div className="text-6xl opacity-20">👥</div>
-            </div>
-          </div>
-
-          <div className="bg-linear-to-br from-pink-500 to-pink-700 rounded-2xl shadow-lg p-6 text-white">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-pink-100 text-sm mb-1">Total Revenue</p>
-                <h3 className="text-4xl font-bold">$5. 2k</h3>
+            ) : stats.recentTransactions?.length > 0 ? (
+              stats.recentTransactions.map((tx) => (
+                <div key={tx._id} className="group flex justify-between items-center p-3 sm:p-4 hover:bg-gray-50 rounded-2xl sm:rounded-3xl transition-all cursor-pointer">
+                  <div className="flex items-center gap-3 sm:gap-4">
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gray-100 rounded-xl sm:rounded-2xl flex items-center justify-center font-black text-gray-400 group-hover:bg-white group-hover:text-purple-600 transition-all shadow-sm shrink-0">
+                      <FiArrowUpRight size={18} className="sm:w-5 sm:h-5" />
+                    </div>
+                    <div>
+                      <p className="font-bold text-gray-900 text-xs sm:text-sm">Enrollment</p>
+                      <p className="text-[10px] sm:text-xs text-gray-400 font-medium">
+                        {new Date(tx.createdAt).toLocaleDateString(undefined, {month: 'short', day: 'numeric'})}
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-gray-900 font-black text-xs sm:text-sm">+₹{tx.amount}</span>
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-10">
+                <FiDollarSign size={40} className="mx-auto mb-4 text-gray-300" />
+                <p className="text-gray-400 text-xs sm:text-sm font-medium">No sales recorded yet.</p>
+                <p className="text-gray-400 text-[10px] sm:text-xs mt-2">Transactions will appear here</p>
               </div>
-              <div className="text-6xl opacity-20">💰</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Quick Actions */}
-        <div className="bg-white rounded-2xl shadow-lg p-8">
-          <h2 className="text-2xl font-bold text-gray-800 mb-6">Quick Actions</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <button className="flex flex-col items-center justify-center p-6 border-2 border-gray-200 rounded-xl hover:border-purple-500 hover:shadow-lg transition-all">
-              <span className="text-4xl mb-2">➕</span>
-              <span className="font-semibold text-gray-700">Create Course</span>
-            </button>
-
-            <button className="flex flex-col items-center justify-center p-6 border-2 border-gray-200 rounded-xl hover:border-purple-500 hover:shadow-lg transition-all">
-              <span className="text-4xl mb-2">📊</span>
-              <span className="font-semibold text-gray-700">View Analytics</span>
-            </button>
-
-            <button className="flex flex-col items-center justify-center p-6 border-2 border-gray-200 rounded-xl hover:border-purple-500 hover:shadow-lg transition-all">
-              <span className="text-4xl mb-2">💬</span>
-              <span className="font-semibold text-gray-700">Messages</span>
-            </button>
-
-            <button className="flex flex-col items-center justify-center p-6 border-2 border-gray-200 rounded-xl hover:border-purple-500 hover:shadow-lg transition-all">
-              <span className="text-4xl mb-2">⚙️</span>
-              <span className="font-semibold text-gray-700">Settings</span>
-            </button>
+            )}
           </div>
         </div>
       </div>
-    </div>
+    </TutorLayout>
   );
 }

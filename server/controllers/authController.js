@@ -1,8 +1,11 @@
 import User from "../models/User.js";
+import Course from "../models/Course.js";
 import crypto from "crypto";
 import { generateToken } from "../utils/jwt.js";
 import { AppError } from "../utils/appError.js";
 import { catchAsync } from "../utils/catchAsync.js";
+import { deleteFromCloudinary } from "../config/cloudinary.js";
+import { logger } from "../utils/logger.js";
 
 // @desc    Register user (student or tutor)
 // @route   POST /api/auth/register
@@ -42,6 +45,7 @@ export const register = catchAsync(async (req, res, next) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        avatar: user.avatar,
       },
     },
   });
@@ -60,7 +64,7 @@ export const login = catchAsync(async (req, res, next) => {
 
   // Find user and include password
   const user = await User.findOne({ email, role, isActive: true }).select(
-    "+password"
+    "+password",
   );
 
   if (!user || !(await user.comparePassword(password))) {
@@ -80,6 +84,7 @@ export const login = catchAsync(async (req, res, next) => {
         name: user.name,
         email: user.email,
         role: user.role,
+        avatar: user.avatar,
       },
     },
   });
@@ -132,12 +137,14 @@ export const forgotPassword = catchAsync(async (req, res, next) => {
   // Create reset URL
   const resetURL = `${process.env.FRONTEND_URL}/reset-password/${resetToken}`;
 
-  // TODO: Send email with resetURL
-  console.log("Password Reset URL:", resetURL);
+  // TODO: Implement email service to send reset link
+  // For now, return the reset token in response (DEVELOPMENT ONLY)
+  // In production, this should only send email and return success message
 
   res.status(200).json({
     success: true,
     message: "Password reset link sent to email",
+    ...(process.env.NODE_ENV === "development" && { resetToken }), // Only in dev
   });
 });
 
@@ -181,5 +188,180 @@ export const resetPassword = catchAsync(async (req, res, next) => {
     success: true,
     message: "Password reset successful",
     token,
+  });
+});
+
+// @desc    Upload or update avatar
+// @route   POST /api/auth/upload-avatar
+// @access  Private
+export const uploadAvatar = catchAsync(async (req, res, next) => {
+  if (!req.file) {
+    return next(new AppError("Please upload an image", 400));
+  }
+
+  const user = await User.findById(req.user._id);
+  if (!user) return next(new AppError("User not found", 404));
+
+  // Validate file data
+  if (!req.file.path || !req.file.filename) {
+    return next(
+      new AppError("Uploaded file is missing expected metadata", 500),
+    );
+  }
+
+  // Delete previous avatar if present (best-effort)
+  if (user.avatarPublicId) {
+    try {
+      await deleteFromCloudinary(user.avatarPublicId, "image");
+    } catch (err) {
+      logger.error("Failed to delete previous avatar from Cloudinary:", err);
+      // continue without failing the request
+    }
+  }
+
+  user.avatar = req.file.path;
+  user.avatarPublicId = req.file.filename;
+  await user.save();
+
+  // Sanitize user before sending
+  const safeUser = user.toObject();
+  delete safeUser.password;
+  delete safeUser.resetPasswordToken;
+  delete safeUser.resetPasswordExpire;
+
+  res.status(200).json({
+    success: true,
+    message: "Avatar uploaded",
+    data: { user: safeUser },
+  });
+});
+
+// protected
+export const updateProfile = catchAsync(async (req, res, next) => {
+  const allowed = ["name", "phone", "bio"];
+  const updates = {};
+  allowed.forEach((k) => {
+    if (req.body[k] !== undefined) updates[k] = req.body[k];
+  });
+
+  const user = await User.findByIdAndUpdate(req.user._id, updates, {
+    new: true,
+    runValidators: true,
+  });
+
+  res.status(200).json({ success: true, data: { user } });
+});
+
+// protected
+export const changePasswordAuth = catchAsync(async (req, res, next) => {
+  const { oldPassword, newPassword } = req.body;
+  if (!oldPassword || !newPassword)
+    return next(new AppError("Provide old and new passwords", 400));
+
+  const user = await User.findById(req.user._id).select("+password");
+  if (!user || !(await user.comparePassword(oldPassword))) {
+    return next(new AppError("Current password is incorrect", 401));
+  }
+
+  user.password = newPassword;
+  await user.save();
+
+  const token = generateToken(user._id);
+  res.status(200).json({
+    success: true,
+    message: "Password changed",
+    token,
+    data: { user },
+  });
+});
+
+// @desc    Get tutor profile with their courses
+// @route   GET /api/users/:id
+// @access  Public
+export const getTutorProfile = catchAsync(async (req, res, next) => {
+  const { id } = req.params;
+
+  // Get tutor with their courses
+  const user = await User.findById(id)
+    .select("name email avatar bio role")
+    .lean();
+
+  if (!user) {
+    return next(new AppError("Tutor not found", 404));
+  }
+
+  if (user.role !== "tutor") {
+    return next(new AppError("User is not a tutor", 400));
+  }
+
+  // Get all published courses by this tutor
+  const courses = await Course.find({
+    tutor: id,
+    isPublished: true,
+  })
+    .select(
+      "_id title description thumbnail price originalPrice level rating numReviews enrolledStudents sections modules lectures totalDuration",
+    )
+    .lean();
+
+  // Calculate lecture count and total duration for each course
+  const coursesWithStats = courses.map((course) => {
+    let lectureCount = 0;
+    let totalDuration = 0;
+
+    // Count lectures from sections/modules
+    if (course.sections && Array.isArray(course.sections)) {
+      course.sections.forEach((section) => {
+        if (section.lectures && Array.isArray(section.lectures)) {
+          lectureCount += section.lectures.length;
+          section.lectures.forEach((lecture) => {
+            totalDuration += lecture.duration || 0;
+          });
+        }
+      });
+    }
+
+    // Fallback to modules if sections not present
+    if (lectureCount === 0 && course.modules && Array.isArray(course.modules)) {
+      course.modules.forEach((module) => {
+        if (module.lectures && Array.isArray(module.lectures)) {
+          lectureCount += module.lectures.length;
+          module.lectures.forEach((lecture) => {
+            totalDuration += lecture.duration || 0;
+          });
+        }
+      });
+    }
+
+    // Fallback to direct lectures array
+    if (
+      lectureCount === 0 &&
+      course.lectures &&
+      Array.isArray(course.lectures)
+    ) {
+      lectureCount = course.lectures.length;
+      course.lectures.forEach((lecture) => {
+        totalDuration += lecture.duration || 0;
+      });
+    }
+
+    // Remove sections/modules/lectures from response to keep it clean
+    const { sections, modules, lectures, ...courseData } = course;
+
+    return {
+      ...courseData,
+      lectureCount,
+      totalDuration,
+    };
+  });
+
+  res.status(200).json({
+    success: true,
+    data: {
+      user: {
+        ...user,
+        courses: coursesWithStats || [],
+      },
+    },
   });
 });
