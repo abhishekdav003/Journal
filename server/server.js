@@ -35,12 +35,18 @@ app.use(helmet());
 app.use(mongoSanitize());
 
 // CORS configuration
+// CORS configuration
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:3000",
+    origin: [
+      "http://localhost:3000",
+      "http://localhost:5173",
+      "https://journal-frontend-85vw.onrender.com"
+    ],
     credentials: true,
-  }),
+  })
 );
+
 
 // Rate limiting - more relaxed for development
 const limiter = rateLimit({
