@@ -41,11 +41,12 @@ app.use(
     origin: [
       "http://localhost:3000",
       "http://localhost:5173",
-      "https://journal-frontend-85vw.onrender.com"
+      "https://journal-frontend-85yw.onrender.com",
     ],
     credentials: true,
-  })
+  }),
 );
+
 
 
 app.options("*", cors());
