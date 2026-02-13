@@ -48,6 +48,8 @@ app.use(
 );
 
 
+app.options("*", cors());
+
 // Rate limiting - more relaxed for development
 const limiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute window
