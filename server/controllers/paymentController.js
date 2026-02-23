@@ -323,3 +323,61 @@ export const retryPayment = catchAsync(async (req, res, next) => {
     },
   });
 });
+
+// ==================== ADMIN ROUTES ====================
+
+// @desc    Get all payments (Admin only)
+// @route   GET /api/admin/payments
+// @access  Private/Admin
+export const getAllPaymentsAdmin = catchAsync(async (req, res, next) => {
+  const { status } = req.query;
+
+  const query = {};
+  if (status && status !== "all") {
+    query.status = status;
+  }
+
+  const payments = await Payment.find(query)
+    .populate("student", "name email")
+    .populate("course", "title")
+    .populate("tutor", "name email")
+    .sort("-createdAt");
+
+  res.status(200).json({
+    success: true,
+    count: payments.length,
+    data: { payments },
+  });
+});
+
+// @desc    Update payment status (Admin only)
+// @route   PATCH /api/admin/payments/:id/status
+// @access  Private/Admin
+export const updatePaymentStatusAdmin = catchAsync(async (req, res, next) => {
+  const { status } = req.body;
+
+  const validStatuses = [
+    "pending",
+    "completed",
+    "failed",
+    "refunded",
+    "expired",
+  ];
+  if (!validStatuses.includes(status)) {
+    return next(new AppError("Invalid payment status", 400));
+  }
+
+  const payment = await Payment.findById(req.params.id);
+
+  if (!payment) {
+    return next(new AppError("Payment not found", 404));
+  }
+
+  payment.status = status;
+  await payment.save();
+
+  res.status(200).json({
+    success: true,
+    data: { payment },
+  });
+});

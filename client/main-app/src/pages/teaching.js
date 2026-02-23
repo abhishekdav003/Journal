@@ -90,6 +90,23 @@ export default function Teaching() {
     "Certificate generation for course completion",
   ];
 
+  const availableCourses = [
+    "Chemistry",
+    "Biology",
+    "Mathematics",
+    "Physics",
+    "General Chemistry I",
+    "General Chemistry II",
+    "Organic Chemistry",
+    "Analytical Chemistry",
+    "Physical Chemistry",
+    "Physical Sciences",
+    "Preparatory Year Chemistry for Medical Students",
+    "Science",
+    "Maths",
+    "Environmental Science",
+  ];
+
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
@@ -200,6 +217,39 @@ export default function Teaching() {
                 <p className="text-gray-400 leading-relaxed">
                   {feature.description}
                 </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Available Courses Section */}
+      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-[#0F0F0F]/30">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-bold text-white mb-4">
+              Popular Courses to{" "}
+              <span className="bg-linear-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+                Teach
+              </span>
+            </h2>
+            <p className="text-gray-400 text-lg max-w-2xl mx-auto">
+              Choose from our extensive list of in-demand courses. Create your own complete course or expand with additional topics.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            {availableCourses.map((course, index) => (
+              <div
+                key={index}
+                className="p-4 bg-linear-to-br from-[#1E1E2E] to-[#2B2B40] rounded-lg border border-purple-500/20 hover:border-purple-500/50 transition-all duration-300 hover:shadow-md hover:shadow-purple-500/10 cursor-pointer group"
+              >
+                <div className="flex items-start justify-between">
+                  <h3 className="text-white font-semibold group-hover:text-purple-400 transition-colors">
+                    {course}
+                  </h3>
+                  <FiBook className="text-purple-400 w-5 h-5 shrink-0" />
+                </div>
               </div>
             ))}
           </div>

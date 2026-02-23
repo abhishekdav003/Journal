@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
+import { useAuth } from '../../../context/AuthContext';
 import { getTutorCourses, togglePublishCourse, deleteCourse, updateCourse } from '../../../services/apiService';
 import TutorLayout from '../../../components/tutor/TutorLayout';
 // IMPORT COURSE CARD
@@ -10,6 +11,7 @@ import toast, { Toaster } from 'react-hot-toast';
 
 export default function MyCourses() {
   const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -18,9 +20,23 @@ export default function MyCourses() {
   const [newTitle, setNewTitle] = useState('');
   const [updating, setUpdating] = useState(false);
 
+  // Authentication check and redirect
   useEffect(() => {
-    fetchCourses();
-  }, []);
+    if (!authLoading) {
+      if (!user) {
+        router.push("/auth/tutor?tab=login");
+      } else if (user.role !== "tutor") {
+        router.push(`/${user.role}/dashboard`);
+      }
+    }
+  }, [user, authLoading, router]);
+
+  useEffect(() => {
+    // Only fetch courses if user is authenticated and is a tutor
+    if (!authLoading && user && user.role === "tutor") {
+      fetchCourses();
+    }
+  }, [authLoading, user]);
 
   const fetchCourses = async () => {
     try {
@@ -102,6 +118,20 @@ export default function MyCourses() {
     course.title.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Show loading while auth state is being determined
+  if (authLoading) {
+    return (
+      <TutorLayout>
+        <div className="flex h-[80vh] items-center justify-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-600"></div>
+        </div>
+      </TutorLayout>
+    );
+  }
+
+  // Redirect handled by useEffect, return null if not authenticated
+  if (!user || user.role !== "tutor") return null;
+
   if (loading) {
     return (
       <TutorLayout>
@@ -129,7 +159,7 @@ export default function MyCourses() {
             <input 
               type="text" 
               placeholder="Search courses..." 
-              className="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none transition shadow-sm text-gray-900 placeholder-gray-400"
+              className="w-full pl-10 pr-4 py-3 bg-[#1E1E2E] border border-gray-700/50 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none transition shadow-sm text-white placeholder-gray-400"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
@@ -158,20 +188,20 @@ export default function MyCourses() {
         </div>
       ) : (
         /* Empty State */
-        <div className="flex flex-col items-center justify-center py-20 bg-white rounded-[2.5rem] border border-dashed border-gray-200 text-center">
-          <div className="w-20 h-20 bg-purple-50 rounded-full flex items-center justify-center mb-6">
-            <FiBook className="text-purple-600 text-3xl" />
+        <div className="flex flex-col items-center justify-center py-16 sm:py-20 bg-[#1E1E2E]/50 rounded-2xl lg:rounded-3xl border border-dashed border-gray-700/50 text-center">
+          <div className="w-16 sm:w-20 h-16 sm:h-20 bg-purple-600/20 rounded-full flex items-center justify-center mb-4 sm:mb-6 border border-purple-500/50">
+            <FiBook className="text-purple-400 text-2xl sm:text-3xl" />
           </div>
-          <h3 className="text-xl font-bold text-gray-900 mb-2">
+          <h3 className="text-lg sm:text-xl font-bold text-white mb-2">
             {searchTerm ? "No courses found" : "No courses created yet"}
           </h3>
-          <p className="text-gray-500 max-w-md mb-8">
+          <p className="text-gray-400 max-w-md mb-6 sm:mb-8 text-xs sm:text-sm">
             {searchTerm 
               ? `We couldn't find any courses matching "${searchTerm}".` 
               : "Start your teaching journey by creating your first curriculum. It only takes a few minutes!"}
           </p>
           <Link href="/tutor/courses/create">
-            <button className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-3 rounded-xl font-bold shadow-lg shadow-purple-200 transition">
+            <button className="bg-purple-600 hover:bg-purple-700 text-white px-6 sm:px-8 py-2.5 sm:py-3 rounded-xl font-bold shadow-lg shadow-purple-900/30 transition-all duration-300 active:scale-95 text-sm sm:text-base">
               Create Your First Course
             </button>
           </Link>
@@ -180,25 +210,25 @@ export default function MyCourses() {
 
       {/* Quick Edit Title Modal */}
       {showEditModal && editingCourse && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowEditModal(false)}>
-          <div className="bg-white rounded-2xl p-6 max-w-lg w-full shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowEditModal(false)}>
+          <div className="bg-linear-to-br from-[#1E1E2E] to-[#2B2B40] rounded-2xl lg:rounded-3xl p-6 max-w-lg w-full shadow-2xl shadow-purple-900/30 border border-gray-800/50" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center justify-between mb-6">
-              <h3 className="text-2xl font-bold text-gray-900">Edit Course Title</h3>
+              <h3 className="text-xl sm:text-2xl font-bold text-white">Edit Course Title</h3>
               <button
                 onClick={() => setShowEditModal(false)}
-                className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+                className="p-2 text-gray-400 hover:text-gray-300 hover:bg-gray-700/50 rounded-lg transition-colors duration-300"
               >
                 <FiX size={20} />
               </button>
             </div>
             
             <div className="mb-6">
-              <label className="block text-sm font-bold text-gray-700 mb-2">Course Title</label>
+              <label className="block text-sm font-bold text-gray-300 mb-2">Course Title</label>
               <input
                 type="text"
                 value={newTitle}
                 onChange={(e) => setNewTitle(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none transition text-gray-900"
+                className="w-full px-4 py-3 border border-gray-700/50 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none transition text-white bg-[#1E1E2E] placeholder-gray-500"
                 placeholder="Enter course title"
                 autoFocus
                 onKeyPress={(e) => {
@@ -207,8 +237,8 @@ export default function MyCourses() {
                   }
                 }}
               />
-              <p className="text-xs text-gray-500 mt-2">
-                Original: <span className="font-semibold">{editingCourse.title}</span>
+              <p className="text-xs text-gray-400 mt-2">
+                Original: <span className="font-semibold text-gray-300">{editingCourse.title}</span>
               </p>
             </div>
 
@@ -216,14 +246,14 @@ export default function MyCourses() {
               <button
                 onClick={() => setShowEditModal(false)}
                 disabled={updating}
-                className="flex-1 px-4 py-3 bg-gray-100 text-gray-700 rounded-xl font-bold hover:bg-gray-200 transition-colors disabled:opacity-50"
+                className="flex-1 px-4 py-3 bg-gray-700 hover:bg-gray-600 text-white rounded-xl font-bold transition-all duration-300 disabled:opacity-50 active:scale-95"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSaveTitle}
                 disabled={updating || !newTitle.trim()}
-                className="flex-1 px-4 py-3 bg-purple-600 text-white rounded-xl font-bold hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="flex-1 px-4 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 active:scale-95"
               >
                 {updating ? (
                   <>

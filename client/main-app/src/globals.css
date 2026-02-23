@@ -80,6 +80,36 @@ body {
   background: rgba(255, 255, 255, 0.5);
 }
 
+/* Custom Scrollbar for Dashboard Graphs */
+.overflow-x-auto::-webkit-scrollbar {
+  height: 4px;
+}
+
+.overflow-x-auto::-webkit-scrollbar-track {
+  background: rgba(139, 92, 246, 0.1);
+  border-radius: 10px;
+}
+
+.overflow-x-auto::-webkit-scrollbar-thumb {
+  background: rgba(168, 85, 247, 0.5);
+  border-radius: 10px;
+}
+
+.overflow-x-auto::-webkit-scrollbar-thumb:hover {
+  background: rgba(168, 85, 247, 0.8);
+}
+
+/* Firefox scrollbar */
+.overflow-x-auto {
+  scrollbar-width: auto;
+}
+
+@supports (scrollbar-color: auto) {
+  .overflow-x-auto {
+    scrollbar-color: rgba(168, 85, 247, 0.5) rgba(139, 92, 246, 0.1);
+  }
+}
+
 /* Gradient Text */
 .gradient-text {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -91,6 +121,31 @@ body {
 /* Glassmorphism Effect */
 .glass-effect {
   background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+
+/* Gradient Animation */
+@keyframes gradientShift {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+.animate-gradient {
+  background-size: 200% 200%;
+  animation: gradientShift 3s ease infinite;
+}
+
+/* Hide Scrollbar */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Chrome, Safari and Opera */
 }

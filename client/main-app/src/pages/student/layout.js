@@ -1,4 +1,5 @@
 import Sidebar from "../../components/student/Sidebar";
+import MobileTabBar from "../../components/student/MobileTabBar";
 import { FiSearch, FiBell, FiMessageSquare } from "react-icons/fi";
 import { useAuth } from "../../context/AuthContext";
 
@@ -15,10 +16,13 @@ const Layout = ({ children }) => {
       <div className="flex-1 flex flex-col transition-all duration-300">
 
         {/* Dynamic Page Content */}
-        <main className="p-6 md:p-8 overflow-y-auto">
+        <main className="p-6 md:p-8 pb-24 lg:pb-8 overflow-y-auto">
           {children}
         </main>
       </div>
+
+      {/* Mobile Tab Bar */}
+      <MobileTabBar />
     </div>
   );
 };

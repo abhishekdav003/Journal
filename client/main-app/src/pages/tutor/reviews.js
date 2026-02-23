@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/router';
+import { useAuth } from '../../context/AuthContext';
 import TutorLayout from '../../components/tutor/TutorLayout';
 // IMPORT API SERVICES
 import { getTutorReviews, replyToReview } from '../../services/apiService';
@@ -6,14 +8,30 @@ import { FiStar, FiMessageSquare, FiCornerDownRight, FiSend } from 'react-icons/
 import toast, { Toaster } from 'react-hot-toast';
 
 export default function TutorReviews() {
+  const router = useRouter();
+  const { user, loading: authLoading } = useAuth();
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [replyText, setReplyText] = useState({});
   const [submittingReply, setSubmittingReply] = useState({});
 
+  // Authentication check and redirect
   useEffect(() => {
-    fetchReviews();
-  }, []);
+    if (!authLoading) {
+      if (!user) {
+        router.push("/auth/tutor?tab=login");
+      } else if (user.role !== "tutor") {
+        router.push(`/${user.role}/dashboard`);
+      }
+    }
+  }, [user, authLoading, router]);
+
+  useEffect(() => {
+    // Only fetch reviews if user is authenticated and is a tutor
+    if (!authLoading && user && user.role === "tutor") {
+      fetchReviews();
+    }
+  }, [authLoading, user]);
 
   const fetchReviews = async () => {
     try {
@@ -73,6 +91,20 @@ export default function TutorReviews() {
     ));
   };
 
+  // Show loading while auth state is being determined
+  if (authLoading) {
+    return (
+      <TutorLayout>
+        <div className="flex h-[80vh] items-center justify-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-600"></div>
+        </div>
+      </TutorLayout>
+    );
+  }
+
+  // Redirect handled by useEffect, return null if not authenticated
+  if (!user || user.role !== "tutor") return null;
+
   if (loading) {
     return (
       <TutorLayout>
@@ -96,16 +128,16 @@ export default function TutorReviews() {
         
         {reviews.length === 0 ? (
            /* Empty State */
-           <div className="bg-white p-12 rounded-4xl border border-dashed border-gray-200 text-center shadow-sm">
-             <div className="w-16 h-16 bg-purple-50 rounded-full flex items-center justify-center mx-auto mb-4">
-               <FiMessageSquare className="text-purple-600 text-2xl" />
+           <div className="bg-[#1E1E2E]/50 p-12 rounded-4xl border border-dashed border-gray-700/50 text-center shadow-sm">
+             <div className="w-16 h-16 bg-purple-600/20 rounded-full flex items-center justify-center mx-auto mb-4">
+               <FiMessageSquare className="text-purple-400 text-2xl" />
              </div>
-             <h3 className="text-xl font-bold text-gray-900">No reviews yet</h3>
-             <p className="text-gray-500 mt-2">When students enroll and rate your courses, they will appear here.</p>
+             <h3 className="text-xl font-bold text-white">No reviews yet</h3>
+             <p className="text-gray-400 mt-2">When students enroll and rate your courses, they will appear here.</p>
            </div>
         ) : (
            reviews.map((review) => (
-             <div key={review._id} className="bg-white p-8 rounded-4xl shadow-sm border border-gray-100 transition hover:shadow-md">
+             <div key={review._id} className="bg-linear-to-br from-[#1E1E2E] to-[#2B2B40] p-8 rounded-4xl shadow-sm border border-gray-800/50 transition hover:shadow-md">
                
                {/* Review Header */}
                <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
@@ -114,8 +146,8 @@ export default function TutorReviews() {
                      {review.student?.name?.[0]?.toUpperCase() || 'S'}
                    </div>
                    <div>
-                     <h4 className="font-bold text-gray-900 text-lg">{review.student?.name || "Unknown Student"}</h4>
-                     <p className="text-xs text-purple-600 font-bold uppercase tracking-wide bg-purple-50 px-2 py-0.5 rounded-md w-fit mt-1">
+                     <h4 className="font-bold text-white text-lg">{review.student?.name || "Unknown Student"}</h4>
+                     <p className="text-xs text-purple-400 font-bold uppercase tracking-wide bg-purple-600/20 px-2 py-0.5 rounded-md w-fit mt-1 border border-purple-500/50">
                         {review.course?.title || "Course Deleted"}
                      </p>
                    </div>

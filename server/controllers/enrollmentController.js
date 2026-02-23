@@ -226,19 +226,73 @@ export const getTutorStudents = catchAsync(async (req, res, next) => {
     .sort("-createdAt");
 
   // Transform enrollments to include progress as completion percentage (not the array)
-  const transformedEnrollments = enrollments.map(enrollment => ({
+  const transformedEnrollments = enrollments.map((enrollment) => ({
     _id: enrollment._id,
     student: enrollment.student,
     course: enrollment.course,
     progress: enrollment.completionPercentage || 0,
     enrolledAt: enrollment.enrolledAt,
     createdAt: enrollment.createdAt,
-    updatedAt: enrollment.updatedAt
+    updatedAt: enrollment.updatedAt,
   }));
 
   res.status(200).json({
     success: true,
     count: transformedEnrollments.length,
     data: { enrollments: transformedEnrollments },
+  });
+});
+
+// ==================== ADMIN ROUTES ====================
+
+// @desc    Get all enrollments (Admin only)
+// @route   GET /api/admin/enrollments
+// @access  Private/Admin
+export const getAllEnrollmentsAdmin = catchAsync(async (req, res, next) => {
+  const enrollments = await Enrollment.find()
+    .populate("student", "name email")
+    .populate({
+      path: "course",
+      select: "title tutor",
+      populate: {
+        path: "tutor",
+        select: "name email",
+      },
+    })
+    .sort("-createdAt");
+
+  // Transform enrollments to include progress as completion percentage
+  const transformedEnrollments = enrollments.map((enrollment) => ({
+    _id: enrollment._id,
+    student: enrollment.student,
+    course: enrollment.course,
+    progress: enrollment.completionPercentage || 0,
+    enrolledAt: enrollment.enrolledAt,
+    createdAt: enrollment.createdAt,
+    updatedAt: enrollment.updatedAt,
+  }));
+
+  res.status(200).json({
+    success: true,
+    count: transformedEnrollments.length,
+    data: { enrollments: transformedEnrollments },
+  });
+});
+
+// @desc    Delete enrollment (Admin only)
+// @route   DELETE /api/admin/enrollments/:id
+// @access  Private/Admin
+export const deleteEnrollmentAdmin = catchAsync(async (req, res, next) => {
+  const enrollment = await Enrollment.findById(req.params.id);
+
+  if (!enrollment) {
+    return next(new AppError("Enrollment not found", 404));
+  }
+
+  await enrollment.deleteOne();
+
+  res.status(200).json({
+    success: true,
+    message: "Enrollment deleted successfully",
   });
 });

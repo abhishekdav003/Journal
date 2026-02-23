@@ -146,6 +146,23 @@ export default function LearnCourse() {
     setExpandedSections(newExpanded);
   };
 
+  const toSeconds = (value) => {
+    const num = Number(value);
+    if (!Number.isFinite(num)) return 0;
+    return Math.max(0, Math.floor(num));
+  };
+
+  const formatDurationCompact = (totalSeconds) => {
+    const safeSeconds = toSeconds(totalSeconds);
+    const hours = Math.floor(safeSeconds / 3600);
+    const minutes = Math.floor((safeSeconds % 3600) / 60);
+    const seconds = safeSeconds % 60;
+
+    if (hours > 0) return `${hours}h ${minutes}m`;
+    if (minutes > 0) return `${minutes}m ${seconds}s`;
+    return `${seconds}s`;
+  };
+
   const getTotalStats = () => {
     let totalLectures = 0;
     let totalDuration = 0;
@@ -156,7 +173,7 @@ export default function LearnCourse() {
         if (section.lectures) {
           totalLectures += section.lectures.length;
           section.lectures.forEach((lecture) => {
-            totalDuration += lecture.duration || 0;
+            totalDuration += toSeconds(lecture.duration);
           });
         }
       });
@@ -167,7 +184,7 @@ export default function LearnCourse() {
         if (module.lectures) {
           totalLectures += module.lectures.length;
           module.lectures.forEach((lecture) => {
-            totalDuration += lecture.duration || 0;
+            totalDuration += toSeconds(lecture.duration);
           });
         }
       });
@@ -176,7 +193,7 @@ export default function LearnCourse() {
     else if (course?.lectures?.length > 0) {
       totalLectures = course.lectures.length;
       course.lectures.forEach((lecture) => {
-        totalDuration += lecture.duration || 0;
+        totalDuration += toSeconds(lecture.duration);
       });
     }
 
@@ -442,9 +459,7 @@ export default function LearnCourse() {
               <span>•</span>
               <span>{stats.lectures} lectures</span>
               <span>•</span>
-              <span>
-                {Math.floor(stats.duration / 60)}h {stats.duration % 60}m
-              </span>
+              <span>{formatDurationCompact(stats.duration)}</span>
               {enrollment && (
                 <>
                   <span>•</span>
@@ -1042,8 +1057,7 @@ export default function LearnCourse() {
             <div className="p-4 border-b border-gray-700">
               <h3 className="font-bold text-lg">Course content</h3>
               <p className="text-xs text-gray-400 mt-1">
-                {stats.lectures} lectures • {Math.floor(stats.duration / 60)}h{" "}
-                {stats.duration % 60}m
+                {stats.lectures} lectures • {formatDurationCompact(stats.duration)}
               </p>
               {enrollment && (
                 <div className="mt-2">
@@ -1090,11 +1104,12 @@ export default function LearnCourse() {
                           </h4>
                           <p className="text-xs text-gray-400 mt-1">
                             {item.lectures?.length || 0} lectures •{" "}
-                            {item.lectures?.reduce(
-                              (sum, l) => sum + (l.duration || 0),
-                              0,
-                            )}{" "}
-                            min
+                            {formatDurationCompact(
+                              item.lectures?.reduce(
+                                (sum, l) => sum + toSeconds(l.duration),
+                                0,
+                              ),
+                            )}
                           </p>
                         </div>
                         <FiChevronDown
@@ -1143,7 +1158,7 @@ export default function LearnCourse() {
                                 </p>
                                 <div className="flex items-center gap-2 mt-1 text-xs text-gray-400">
                                   <FiClock size={12} />
-                                  <span>{lecture.duration || 0} min</span>
+                                  <span>{formatDurationCompact(lecture.duration)}</span>
                                   {lecture.isPreview && (
                                     <>
                                       <span>•</span>

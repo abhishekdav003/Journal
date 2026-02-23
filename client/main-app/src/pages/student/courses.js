@@ -20,6 +20,23 @@ export default function Courses() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all"); // all, in-progress, completed
 
+  const toSeconds = (value) => {
+    const num = Number(value);
+    if (!Number.isFinite(num)) return 0;
+    return Math.max(0, Math.floor(num));
+  };
+
+  const formatDurationCompact = (totalSeconds) => {
+    const safeSeconds = toSeconds(totalSeconds);
+    const hours = Math.floor(safeSeconds / 3600);
+    const minutes = Math.floor((safeSeconds % 3600) / 60);
+    const seconds = safeSeconds % 60;
+
+    if (hours > 0) return `${hours}h ${minutes}m`;
+    if (minutes > 0) return `${minutes}m ${seconds}s`;
+    return `${seconds}s`;
+  };
+
   // Redirect unauthenticated users
   useEffect(() => {
     if (authLoading) return;
@@ -67,16 +84,28 @@ export default function Courses() {
     inProgress: courses.filter((c) => c.progress > 0 && c.progress < 100)
       .length,
     completed: courses.filter((c) => c.progress >= 100).length,
-    totalMinutes: courses.reduce((sum, c) => {
-      // Calculate duration from sections/lectures
+    totalSeconds: courses.reduce((sum, c) => {
+      // Calculate duration from sections/modules/lectures
       let duration = 0;
       if (c.sections && Array.isArray(c.sections)) {
         c.sections.forEach((section) => {
           if (section.lectures && Array.isArray(section.lectures)) {
             section.lectures.forEach((lecture) => {
-              duration += lecture.duration || 0;
+              duration += toSeconds(lecture.duration);
             });
           }
+        });
+      } else if (c.modules && Array.isArray(c.modules)) {
+        c.modules.forEach((module) => {
+          if (module.lectures && Array.isArray(module.lectures)) {
+            module.lectures.forEach((lecture) => {
+              duration += toSeconds(lecture.duration);
+            });
+          }
+        });
+      } else if (c.lectures && Array.isArray(c.lectures)) {
+        c.lectures.forEach((lecture) => {
+          duration += toSeconds(lecture.duration);
         });
       }
       return sum + duration;
@@ -153,10 +182,10 @@ export default function Courses() {
               </div>
               <span className="text-pink-300 text-sm font-medium">Time</span>
             </div>
-            <p className="text-3xl font-bold text-white">
-              {Math.floor(stats.totalMinutes / 60)}
+            <p className="text-2xl font-bold text-white">
+              {formatDurationCompact(stats.totalSeconds)}
             </p>
-            <p className="text-xs text-pink-200 mt-1">Hours</p>
+            <p className="text-xs text-pink-200 mt-1">Total Time</p>
           </div>
         </div>
 
@@ -239,7 +268,7 @@ export default function Courses() {
               const progress = course.progress || 0;
               const isCompleted = progress >= 100;
 
-              // Calculate lecture count and duration from sections
+              // Calculate lecture count and duration from sections/modules/lectures
               let lectureCount = 0;
               let courseDuration = 0;
               if (course.sections && Array.isArray(course.sections)) {
@@ -247,9 +276,23 @@ export default function Courses() {
                   if (section.lectures && Array.isArray(section.lectures)) {
                     lectureCount += section.lectures.length;
                     section.lectures.forEach((lecture) => {
-                      courseDuration += lecture.duration || 0;
+                      courseDuration += toSeconds(lecture.duration);
                     });
                   }
+                });
+              } else if (course.modules && Array.isArray(course.modules)) {
+                course.modules.forEach((module) => {
+                  if (module.lectures && Array.isArray(module.lectures)) {
+                    lectureCount += module.lectures.length;
+                    module.lectures.forEach((lecture) => {
+                      courseDuration += toSeconds(lecture.duration);
+                    });
+                  }
+                });
+              } else if (course.lectures && Array.isArray(course.lectures)) {
+                lectureCount = course.lectures.length;
+                course.lectures.forEach((lecture) => {
+                  courseDuration += toSeconds(lecture.duration);
                 });
               }
 
@@ -317,10 +360,7 @@ export default function Courses() {
                       </div>
                       <div className="flex items-center gap-1">
                         <FiClock size={14} />
-                        <span>
-                          {Math.floor(courseDuration / 60)}h{" "}
-                          {courseDuration % 60}m
-                        </span>
+                        <span>{formatDurationCompact(courseDuration)}</span>
                       </div>
                     </div>
 

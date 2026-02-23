@@ -19,6 +19,7 @@ export const resetPassword = (token, data) =>
   API.post(`/auth/reset-password/${token}`, data);
 export const changePassword = (data) => API.post("/auth/change-password", data);
 export const updateProfile = (data) => API.patch("/auth/update-profile", data);
+export const deleteAccount = (data) => API.delete("/auth/delete-account", { data });
 
 export const getMe = () => API.get("/auth/me");
 
@@ -29,7 +30,7 @@ export const uploadAvatar = (formData) =>
   API.post("/auth/upload-avatar", formData);
 
 // Dashboard APIs
-export const getDashboardStats = () => API.get("/dashboard/stats");
+export const getDashboardStats = (year) => API.get("/dashboard/stats", { params: { year } });
 export const getEnrolledCourses = () => API.get("/dashboard/courses");
 
 // Payment APIs

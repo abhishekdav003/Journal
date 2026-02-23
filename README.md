@@ -40,6 +40,16 @@ Journal enables students to browse, preview, and enroll in courses, while tutors
 - Track learners and performance
 - Show a public tutor profile with avatar, bio, and course list
 
+### Admins
+
+- Access secure admin panel (separate application on port 3002)
+- Manage all users (students, tutors, admins)
+- Control course publication and visibility
+- Monitor all enrollments and student progress
+- Review and manage payment transactions
+- Moderate course reviews
+- View comprehensive analytics and platform statistics
+
 ## Core Features
 
 - Course catalog with search, category, and level filters
@@ -58,9 +68,9 @@ Journal enables students to browse, preview, and enroll in courses, while tutors
 ## Monorepo Layout
 
 - client/
-  - admin-app/ (Next.js admin)
-  - main-app/ (Next.js main app)
-- server/ (Express + MongoDB API)
+  - admin-app/ (Next.js admin panel - port 3002)
+  - main-app/ (Next.js main app - port 3000)
+- server/ (Express + MongoDB API - port 5000)
 
 ## Quick Start
 
@@ -71,24 +81,31 @@ git clone <repo-url>
 cd server
 npm install
 
-# client
+# main client app
 cd ../client/main-app
+npm install
+
+# admin app
+cd ../admin-app
 npm install
 ```
 
-## Environment Variables
+## Setting Up Admin User
 
-Create server/.env:
+Before accessing the admin panel, create an admin user:
+
+```bash
+cd server
+npm run create-admin
+```
+
+This will create a default admin user:
+
+- Email: admin@example.com
+  Create client/admin-app/.env.local:
 
 ```
-PORT=5000
-MONGO_URI=your_mongodb_uri
-JWT_SECRET=your_secret
-CLOUDINARY_CLOUD_NAME=...
-CLOUDINARY_API_KEY=...
-CLOUDINARY_API_SECRET=...
-RAZORPAY_KEY_ID=...      # if payments enabled
-RAZORPAY_KEY_SECRET=...  # if payments enabled
+NEXT_PUBLIC_API_URL=http://localhost:5000/api
 ```
 
 ## Run & Build
@@ -97,8 +114,51 @@ Backend:
 
 ```bash
 cd server
-node server.js
+node server.js   # or npm start
 ```
+
+Frontend (main app):
+
+```bash
+cd client/main-app
+npm run dev   # http://localhost:3000
+npm run build && npm run start
+```
+
+Admin Panel:
+
+```bash
+cd client/admin-app
+npm run dev   # http://localhost:3002
+npm run build && npm run start
+```
+
+## Accessing the Admin Panel
+
+1. Make sure the backend server is running
+2. Navigate to http://localhost:3002
+3. Login with admin credentials
+4. Manage your platform!
+
+The admin panel is completely separate from the main application and requires admin role to access.ORPAY_KEY_ID=... # if payments enabled
+RAZORPAY_KEY_SECRET=... # if payments enabled
+
+````
+tutor/:id (tutor + their courses)
+- Admin endpoints:
+  - GET /auth/users (all users with filters)
+  - PUT /auth/users/:id (update user)
+  - DELETE /auth/users/:id (delete user)
+  - PATCH /auth/users/:id/toggle-status (activate/deactivate)
+  - GET /stats/admin-dashboard (dashboard statistic
+## Run & Build
+
+Backend:
+
+```bash
+cd server
+node server.js
+````
 
 Frontend (main app):
 

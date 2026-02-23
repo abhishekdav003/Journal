@@ -1,7 +1,7 @@
 import express from "express";
 import Review from "../models/Review.js";
 import Course from "../models/Course.js";
-import { protect, restrictTo } from "../middleware/auth.js";
+import { protect, restrictTo, protectAdmin } from "../middleware/auth.js";
 import { catchAsync } from "../utils/catchAsync.js";
 
 const router = express.Router();
@@ -188,6 +188,73 @@ router.patch(
     res.status(200).json({
       success: true,
       data: populatedReview,
+    });
+  }),
+);
+
+// ==================== ADMIN ROUTES ====================
+
+// @desc    Get all reviews (Admin only)
+// @route   GET /api/admin/reviews
+// @access  Private/Admin
+router.get(
+  "/admin/all",
+  protectAdmin,
+  catchAsync(async (req, res) => {
+    const reviews = await Review.find()
+      .populate("student", "name email")
+      .populate("course", "title")
+      .sort("-createdAt");
+
+    res.status(200).json({
+      success: true,
+      count: reviews.length,
+      data: { reviews },
+    });
+  }),
+);
+
+// @desc    Delete review (Admin only)
+// @route   DELETE /api/admin/reviews/:id
+// @access  Private/Admin
+router.delete(
+  "/admin/:id",
+  protectAdmin,
+  catchAsync(async (req, res) => {
+    const review = await Review.findById(req.params.id);
+
+    if (!review) {
+      return res.status(404).json({
+        success: false,
+        message: "Review not found",
+      });
+    }
+
+    const courseId = review.course;
+    await review.deleteOne();
+
+    // Recalculate course rating after deletion
+    const remainingReviews = await Review.find({ course: courseId });
+
+    if (remainingReviews.length > 0) {
+      const avgRating =
+        remainingReviews.reduce((sum, r) => sum + r.rating, 0) /
+        remainingReviews.length;
+
+      await Course.findByIdAndUpdate(courseId, {
+        rating: avgRating.toFixed(1),
+        numReviews: remainingReviews.length,
+      });
+    } else {
+      await Course.findByIdAndUpdate(courseId, {
+        rating: 0,
+        numReviews: 0,
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Review deleted successfully",
     });
   }),
 );

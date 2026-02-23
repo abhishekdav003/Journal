@@ -26,43 +26,102 @@ export const getDashboardStats = catchAsync(async (req, res) => {
     const payments = await Payment.find({
       course: { $in: courseIds },
       status: "completed",
-    });
+    })
+    .sort({ createdAt: -1 })
+    .populate('student', 'name email')
+    .populate('course', 'title');
     const totalRevenue = payments.reduce((acc, curr) => acc + curr.amount, 0);
 
-    // 3. Revenue Graph Data (Last 6 Months)
-    const sixMonthsAgo = new Date();
-    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    // 3. Revenue Graph Data (Year-based or All-time, with 0 revenue months included)
+    const yearParam = req.query.year;
+    let graphData = [];
 
-    const monthlyRevenue = await Payment.aggregate([
-      {
-        $match: {
-          course: { $in: courseIds },
-          status: "completed",
-          createdAt: { $gte: sixMonthsAgo },
+    if (yearParam === "all") {
+      // All-time data grouped by year-month
+      const monthlyRevenue = await Payment.aggregate([
+        {
+          $match: {
+            course: { $in: courseIds },
+            status: "completed",
+          },
         },
-      },
-      { $group: { _id: { $month: "$createdAt" }, total: { $sum: "$amount" } } },
-      { $sort: { _id: 1 } },
-    ]);
+        {
+          $group: {
+            _id: {
+              year: { $year: "$createdAt" },
+              month: { $month: "$createdAt" },
+            },
+            total: { $sum: "$amount" },
+          },
+        },
+        { $sort: { "_id.year": 1, "_id.month": 1 } },
+      ]);
 
-    const monthNames = [
-      "Jan",
-      "Feb",
-      "Mar",
-      "Apr",
-      "May",
-      "Jun",
-      "Jul",
-      "Aug",
-      "Sep",
-      "Oct",
-      "Nov",
-      "Dec",
-    ];
-    const graphData = monthlyRevenue.map((item) => ({
-      name: monthNames[item._id - 1],
-      revenue: item.total,
-    }));
+      const monthNames = [
+        "Jan",
+        "Feb",
+        "Mar",
+        "Apr",
+        "May",
+        "Jun",
+        "Jul",
+        "Aug",
+        "Sep",
+        "Oct",
+        "Nov",
+        "Dec",
+      ];
+
+      graphData = monthlyRevenue.map((item) => ({
+        name: `${monthNames[item._id.month - 1]} ${item._id.year}`,
+        revenue: item.total,
+      }));
+    } else {
+      // Year-specific data
+      const year = parseInt(yearParam) || new Date().getFullYear();
+      const currentDate = new Date();
+      const startOfYear = new Date(year, 0, 1);
+      const endOfMonth = new Date(year, currentDate.getMonth(), 31, 23, 59, 59);
+
+      const monthlyRevenue = await Payment.aggregate([
+        {
+          $match: {
+            course: { $in: courseIds },
+            status: "completed",
+            createdAt: { $gte: startOfYear, $lte: endOfMonth },
+          },
+        },
+        { $group: { _id: { $month: "$createdAt" }, total: { $sum: "$amount" } } },
+      ]);
+
+      const monthNames = [
+        "Jan",
+        "Feb",
+        "Mar",
+        "Apr",
+        "May",
+        "Jun",
+        "Jul",
+        "Aug",
+        "Sep",
+        "Oct",
+        "Nov",
+        "Dec",
+      ];
+
+      // Show all 12 months for all years
+      const monthsToShow = 12;
+
+      for (let i = 0; i < monthsToShow; i++) {
+        const monthName = monthNames[i];
+
+        const monthRevenueData = monthlyRevenue.find(item => item._id === i + 1);
+        graphData.push({
+          name: monthName,
+          revenue: monthRevenueData ? monthRevenueData.total : 0,
+        });
+      }
+    }
 
     return res.status(200).json({
       success: true,
@@ -85,7 +144,7 @@ export const getDashboardStats = catchAsync(async (req, res) => {
     .populate({
       path: "course",
       select:
-        "title thumbnail category tutor sections rating numReviews enrolledStudents",
+        "title thumbnail category tutor modules lectures totalDuration rating numReviews enrolledStudents",
       populate: { path: "tutor", select: "name email avatar" },
     })
     .sort({ createdAt: -1 });
@@ -98,15 +157,22 @@ export const getDashboardStats = catchAsync(async (req, res) => {
     let lectureCount = 0;
     let courseDuration = 0;
 
-    if (course.sections && Array.isArray(course.sections)) {
-      course.sections.forEach((section) => {
-        if (section.lectures && Array.isArray(section.lectures)) {
-          lectureCount += section.lectures.length;
-          section.lectures.forEach((lecture) => {
+    if (course.modules && Array.isArray(course.modules)) {
+      course.modules.forEach((module) => {
+        if (module.lectures && Array.isArray(module.lectures)) {
+          lectureCount += module.lectures.length;
+          module.lectures.forEach((lecture) => {
             courseDuration += lecture.duration || 0;
           });
         }
       });
+    } else if (course.lectures && Array.isArray(course.lectures)) {
+      lectureCount = course.lectures.length;
+      course.lectures.forEach((lecture) => {
+        courseDuration += lecture.duration || 0;
+      });
+    } else if (course.totalDuration) {
+      courseDuration = course.totalDuration;
     }
 
     totalTutorials += lectureCount;

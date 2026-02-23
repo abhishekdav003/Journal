@@ -6,6 +6,7 @@ import mongoSanitize from "express-mongo-sanitize";
 import rateLimit from "express-rate-limit";
 import connectDB from "./config/db.js";
 import authRoutes from "./routes/authRoutes.js";
+import adminRoutes from "./routes/adminRoutes.js";
 import courseRoutes from "./routes/courseRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
 import enrollmentRoutes from "./routes/enrollmentRoutes.js";
@@ -35,14 +36,29 @@ app.use(helmet());
 app.use(mongoSanitize());
 
 // CORS configuration
-// CORS configuration
+const allowedOrigins = [
+  "http://localhost:3000", // Main app
+  "http://localhost:3002",
+  "*", // Admin panel
+  process.env.FRONTEND_URL,
+  process.env.ADMIN_URL,
+].filter(Boolean);
+
 app.use(
   cors({
-    origin: [
-      "http://localhost:3000",
-      "http://localhost:5173",
-      "https://journal-frontend-85yw.onrender.com",
-    ],
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps or curl)
+      if (!origin) return callback(null, true);
+
+      if (
+        allowedOrigins.indexOf(origin) !== -1 ||
+        process.env.NODE_ENV === "development"
+      ) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
     credentials: true,
   }),
 );
@@ -79,6 +95,7 @@ app.get("/health", (req, res) => {
 
 // API routes
 app.use("/api/auth", authRoutes);
+app.use("/api/admin", adminRoutes);
 app.use("/api/courses", courseRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/enrollments", enrollmentRoutes);

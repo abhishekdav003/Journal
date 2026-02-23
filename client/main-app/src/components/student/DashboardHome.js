@@ -83,6 +83,47 @@ const DashboardHome = ({ user }) => {
     return parts.join(" ");
   };
 
+  const toSeconds = (value) => {
+    const num = Number(value);
+    if (!Number.isFinite(num)) return 0;
+    return Math.max(0, Math.floor(num));
+  };
+
+  const getCourseStats = (course) => {
+    let lectureCount = 0;
+    let durationSeconds = 0;
+
+    if (course?.sections && Array.isArray(course.sections)) {
+      course.sections.forEach((section) => {
+        if (section.lectures && Array.isArray(section.lectures)) {
+          lectureCount += section.lectures.length;
+          section.lectures.forEach((lecture) => {
+            durationSeconds += toSeconds(lecture.duration);
+          });
+        }
+      });
+    } else if (course?.modules && Array.isArray(course.modules)) {
+      course.modules.forEach((module) => {
+        if (module.lectures && Array.isArray(module.lectures)) {
+          lectureCount += module.lectures.length;
+          module.lectures.forEach((lecture) => {
+            durationSeconds += toSeconds(lecture.duration);
+          });
+        }
+      });
+    } else if (course?.lectures && Array.isArray(course.lectures)) {
+      lectureCount = course.lectures.length;
+      course.lectures.forEach((lecture) => {
+        durationSeconds += toSeconds(lecture.duration);
+      });
+    }
+
+    return {
+      lectureCount: course?.lectureCount || lectureCount,
+      durationSeconds: course?.duration || durationSeconds,
+    };
+  };
+
   if (loading) {
     return (
       <div className="space-y-6 animate-pulse">
@@ -257,7 +298,10 @@ const DashboardHome = ({ user }) => {
                 return bDate - aDate;
               })
               .slice(0, 3)
-              .map((course) => (
+              .map((course) => {
+                const { lectureCount, durationSeconds } = getCourseStats(course);
+
+                return (
               <div
                 key={course._id}
                 className="bg-linear-to-br from-[#1E1E2E] to-[#2B2B40] p-5 rounded-3xl border border-gray-800/50 hover:border-purple-500/50 transition-all duration-300 group hover:shadow-2xl hover:shadow-purple-900/30 hover:-translate-y-2"
@@ -293,11 +337,11 @@ const DashboardHome = ({ user }) => {
                 <div className="flex items-center gap-3 text-xs text-gray-400 mb-5 mt-3">
                   <span className="flex items-center gap-1.5 bg-[#2B2B40] px-3 py-1.5 rounded-lg border border-gray-700/50">
                     <FiPlayCircle className="text-purple-400" />{" "}
-                    {course.lectureCount || 0} Lessons
+                    {lectureCount} Lessons
                   </span>
                   <span className="flex items-center gap-1.5 bg-[#2B2B40] px-3 py-1.5 rounded-lg border border-gray-700/50">
                     <FiClock className="text-pink-400" />{" "}
-                    {formatDuration(course.duration)}
+                    {formatDuration(durationSeconds)}
                   </span>
                 </div>
 
@@ -315,7 +359,8 @@ const DashboardHome = ({ user }) => {
                   </div>
                 </div>
               </div>
-            ))
+            );
+          })
           )}
         </div>
       </div>
@@ -373,7 +418,7 @@ const DashboardHome = ({ user }) => {
             ) : (
               <>
                 {/* Grid lines background */}
-                <div className="relative bg-[#1E1E2E]/30 rounded-2xl p-6 border border-gray-800/30 backdrop-blur-sm">
+                <div className="relative bg-[#1E1E2E]/30 rounded-2xl p-6 md:p-6 border border-gray-800/30 backdrop-blur-sm overflow-hidden">
                   {/* Horizontal grid lines */}
                   <div className="absolute inset-x-6 top-6 bottom-20 flex flex-col justify-between pointer-events-none">
                     {[100, 75, 50, 25, 0].map((val) => (
@@ -384,9 +429,13 @@ const DashboardHome = ({ user }) => {
                     ))}
                   </div>
 
-                  {/* Bar Chart */}
-                  <div className="flex items-end justify-around h-56 gap-6 px-12 pt-4 relative z-10">
-                    {coursePerformance.map((data, i) => {
+                  {/* Single Scrollable Container for both bars and names */}
+                  <div className="overflow-x-auto -mx-6 px-6">
+                    <div style={{ minWidth: coursePerformance.length > 5 ? `${coursePerformance.length * 70}px` : '100%' }}>
+                      
+                      {/* Bar Chart */}
+                      <div className="flex items-end h-56 gap-3 md:gap-6 px-6 md:px-12 pt-16 md:pt-16 relative z-10">
+                        {coursePerformance.map((data, i) => {
                       // Dynamic color and styling based on progress
                       const getBarStyles = (progress) => {
                         if (progress >= 75) return {
@@ -424,23 +473,23 @@ const DashboardHome = ({ user }) => {
                       return (
                         <div
                           key={i}
-                          className="flex-1 max-w-25 h-full relative group flex flex-col justify-end items-center cursor-pointer transform hover:-translate-y-2 transition-all duration-300"
+                          className="shrink-0 w-14 md:flex-1 md:max-w-25 h-full relative group flex flex-col justify-end items-center cursor-pointer transform hover:-translate-y-2 transition-all duration-300"
                         >
                           {/* Percentage Badge */}
-                          <div className={`absolute -top-12 left-1/2 transform -translate-x-1/2 z-30 bg-linear-to-r ${styles.badge} px-4 py-2 rounded-xl border-2 border-white/20 shadow-2xl ${styles.shadow} group-hover:scale-110 group-hover:-translate-y-2 transition-all duration-300`}>
-                            <p className="text-sm font-black text-white">
+                          <div className={`absolute -top-10 md:-top-12 left-1/2 transform -translate-x-1/2 z-30 bg-linear-to-r ${styles.badge} px-2 py-1 md:px-4 md:py-2 rounded-lg md:rounded-xl border border-white/20 md:border-2 shadow-xl md:shadow-2xl ${styles.shadow} group-hover:scale-110 group-hover:-translate-y-2 transition-all duration-300`}>
+                            <p className="text-[10px] md:text-sm font-black text-white">
                               {Math.round(data.progress)}%
                             </p>
-                            <div className="absolute -bottom-1.5 left-1/2 transform -translate-x-1/2 w-3 h-3 bg-inherit rotate-45 border-r-2 border-b-2 border-white/20"></div>
+                            <div className="hidden md:block absolute -bottom-1.5 left-1/2 transform -translate-x-1/2 w-3 h-3 bg-inherit rotate-45 border-r-2 border-b-2 border-white/20"></div>
                           </div>
 
                           {/* Progress Bar */}
                           <div
                             style={{ 
                               height: `${Math.max(data.progress, 8)}%`,
-                              minHeight: '32px'
+                              minHeight: '24px'
                             }}
-                            className={`w-full bg-linear-to-t ${styles.gradient} rounded-2xl transition-all duration-700 ease-out relative shadow-2xl ${styles.shadow} ${styles.glow} group-hover:scale-105 ring-4 ${styles.ring} overflow-hidden`}
+                            className={`w-full bg-linear-to-t ${styles.gradient} rounded-xl md:rounded-2xl transition-all duration-700 ease-out relative shadow-xl md:shadow-2xl ${styles.shadow} ${styles.glow} group-hover:scale-105 ring-2 md:ring-4 ${styles.ring} overflow-hidden`}
                           >
                             {/* Animated shine effect */}
                             <div className="absolute inset-0 bg-linear-to-t from-transparent via-white/30 to-white/40 group-hover:via-white/50 transition-all rounded-2xl"></div>
@@ -455,19 +504,22 @@ const DashboardHome = ({ user }) => {
                   </div>
                   
                   {/* Course Names */}
-                  <div className="flex justify-around gap-6 mt-6 px-12">
+                  <div className="flex gap-3 md:gap-6 mt-6 px-6 md:px-12">
                     {coursePerformance.map((data, i) => (
-                      <div key={i} className="flex-1 max-w-25 text-center group cursor-pointer">
-                        <div className="bg-[#2B2B40]/50 backdrop-blur-sm px-2 py-2 rounded-lg border border-gray-700/30 group-hover:border-purple-500/50 transition-all">
-                          <p className="text-xs text-gray-300 group-hover:text-purple-400 transition-colors font-bold truncate">
+                      <div key={i} className="shrink-0 w-14 md:flex-1 md:max-w-25 text-center group cursor-pointer">
+                        <div className="bg-[#2B2B40]/50 backdrop-blur-sm px-1 py-1.5 md:px-2 md:py-2 rounded-md md:rounded-lg border border-gray-700/30 group-hover:border-purple-500/50 transition-all">
+                          <p className="text-[9px] md:text-xs text-gray-300 group-hover:text-purple-400 transition-colors font-bold truncate" title={data.shortName}>
                             {data.shortName}
                           </p>
-                          <p className="text-[10px] text-gray-500 mt-0.5 truncate" title={data.courseName}>
+                          <p className="text-[8px] md:text-[10px] text-gray-500 mt-0.5 truncate hidden md:block" title={data.courseName}>
                             {data.lectureCount || 0} lessons
                           </p>
                         </div>
                       </div>
                     ))}
+                  </div>
+                  
+                    </div>
                   </div>
                 </div>
 

@@ -110,6 +110,7 @@ export default function Header() {
   const navItems = [
     { name: "Home", path: "/" },
     { name: "Courses", path: "/courses" },
+    { name: "Research", path: "/research" },
     { name: "Teaching", path: "/teaching" },
     { name: "Training", path: "/training" },
   ];
@@ -133,9 +134,14 @@ export default function Header() {
       <div className="max-w-7xl mx-auto px-4 md:px-6 h-16 flex justify-between items-center relative z-10">
         {/* --- LEFT: LOGO --- */}
         <Link href="/" className="flex items-center gap-1 group shrink-0">
-          <span className="text-xl md:text-2xl font-bold tracking-tight bg-linear-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
-            Journal
-          </span>
+          <Image
+            src="/logo.png"
+            alt="Journal"
+            width={120}
+            height={40}
+            className="h-10 md:h-10 w-auto object-contain"
+            priority
+          />
         </Link>
 
         {/* --- CENTER: DESKTOP NAVIGATION (Pill Design) + SEARCH --- */}

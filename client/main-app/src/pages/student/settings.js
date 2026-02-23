@@ -19,12 +19,25 @@ import {
   FiEye,
   FiEyeOff,
   FiEdit2,
+  FiShield,
+  FiXCircle,
 } from "react-icons/fi";
 import Image from "next/image";
 
 export default function Settings() {
   const { user, logout, login, loading } = useAuth();
   const router = useRouter();
+  const { tab = "profile" } = router.query;
+
+  // Tab state
+  const [activeTab, setActiveTab] = useState(tab || "profile");
+
+  // Update active tab from URL
+  useEffect(() => {
+    if (tab) {
+      setActiveTab(tab);
+    }
+  }, [tab]);
 
   // Redirect unauthenticated users to login
   useEffect(() => {
@@ -271,6 +284,17 @@ export default function Settings() {
     }
   }
 
+  const changeTab = (tabId) => {
+    setActiveTab(tabId);
+    router.push(`/student/settings?tab=${tabId}`, undefined, { shallow: true });
+  };
+
+  const tabs = [
+    { id: "profile", label: "Profile Info", icon: FiUser },
+    { id: "security", label: "Security", icon: FiShield },
+    { id: "close", label: "Close Account", icon: FiXCircle, danger: true },
+  ];
+
   return (
     <Layout>
       <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in duration-500 pb-10">
@@ -300,8 +324,37 @@ export default function Settings() {
           </p>
         </div>
 
+        {/* --- TABS --- */}
+        <div className="bg-[#1E1E2E] p-2 rounded-2xl border border-gray-800 shadow-xl">
+          <div className="flex flex-nowrap gap-2 overflow-x-auto pb-2 scrollbar-hide">
+            {tabs.map((tabItem) => {
+              const Icon = tabItem.icon;
+              const isActive = activeTab === tabItem.id;
+              return (
+                <button
+                  key={tabItem.id}
+                  onClick={() => changeTab(tabItem.id)}
+                  className={`flex items-center gap-2 px-4 py-3 rounded-xl font-semibold transition-all duration-200 whitespace-nowrap ${
+                    tabItem.danger
+                      ? isActive
+                        ? "bg-red-500/20 text-red-400 border border-red-500/30"
+                        : "text-gray-400 hover:bg-red-500/10 hover:text-red-400"
+                      : isActive
+                      ? "bg-[#6D28D9] text-white shadow-lg"
+                      : "text-gray-400 hover:bg-[#2B2B40] hover:text-white"
+                  }`}
+                >
+                  <Icon className="w-5 h-5 shrink-0" />
+                  <span className="text-sm">{tabItem.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         {/* --- PROFILE BANNER & AVATAR --- */}
-        <div className="relative group rounded-3xl bg-[#1E1E2E] border border-gray-800 shadow-xl overflow-visible mt-10">
+        {activeTab === "profile" && (
+          <div className="relative group rounded-3xl bg-[#1E1E2E] border border-gray-800 shadow-xl overflow-visible mt-10">
           {/* Cover Photo */}
           <div className="h-48 bg-linear-to-r from-[#6D28D9] via-[#8B5CF6] to-[#1E1E2E] rounded-t-3xl w-full relative overflow-hidden">
             <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-20"></div>
@@ -348,10 +401,12 @@ export default function Settings() {
             </div>
           </div>
         </div>
+        )}
 
-        {/* --- FORMS GRID --- */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* 1. PERSONAL INFORMATION */}
+        {/* --- TAB CONTENT --- */}
+
+        {/* Profile Tab */}
+        {activeTab === "profile" && (
           <div className="bg-[#1E1E2E] p-8 rounded-3xl border border-gray-800 shadow-lg">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-xl font-bold text-white flex items-center gap-2">
@@ -430,9 +485,40 @@ export default function Settings() {
               </div>
             </form>
           </div>
+        )}
 
-          {/* 2. SECURITY & PASSWORD */}
+        {/* Security Tab */}
+        {activeTab === "security" && (
           <div className="space-y-8">
+            {/* Email Section (Blocked) */}
+            <div className="bg-[#1E1E2E] p-8 rounded-3xl border border-gray-800 shadow-lg">
+              <div className="flex items-center gap-2 mb-4">
+                <div className="w-1 h-8 bg-linear-to-b from-purple-500 to-pink-500 rounded-full"></div>
+                <h3 className="text-xl font-bold text-white">📧 Email Address</h3>
+              </div>
+
+              <div>
+                <label className="block text-sm text-gray-300 mb-2 font-medium">
+                  Your registered email
+                </label>
+                <div className="relative">
+                  <input
+                    type="email"
+                    value={displayProfile.email || ""}
+                    disabled
+                    className="w-full bg-[#0F0F16] border border-gray-700 rounded-xl px-4 py-3.5 text-gray-400 cursor-not-allowed opacity-70"
+                  />
+                  <div className="absolute inset-0 cursor-not-allowed rounded-xl"></div>
+                </div>
+                <div className="mt-3 p-3 bg-yellow-500/10 border border-yellow-500/30 rounded-lg flex items-start gap-2">
+                  <FiAlertTriangle className="text-yellow-400 mt-0.5 shrink-0" />
+                  <p className="text-xs text-yellow-200">
+                    Your email address is locked and cannot be changed at this time. Contact support if you need assistance.
+                  </p>
+                </div>
+              </div>
+            </div>
+
             {/* Change Password Card */}
             <div className="bg-[#1E1E2E] p-8 rounded-3xl border border-gray-800 shadow-lg">
               <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
@@ -550,6 +636,26 @@ export default function Settings() {
                 </div>
               </form>
             </div>
+          </div>
+        )}
+
+        {/* Close Account Tab */}
+        {activeTab === "close" && (
+          <div className="space-y-6">
+            {/* Warning Section */}
+            <div className="bg-red-500/10 border border-red-500/30 p-6 rounded-xl">
+              <div className="flex items-start gap-4">
+                <FiAlertTriangle className="text-red-400 shrink-0 mt-1" size={24} />
+                <div>
+                  <h3 className="text-lg font-semibold text-red-400 mb-2">Warning</h3>
+                  <p className="text-gray-300 text-sm leading-relaxed">
+                    If you close your account, you will be unsubscribed from all your courses and
+                    will lose access forever. Account deletion is final. There will be no way to
+                    retrieve or restore your account, or any associated data with your account.
+                  </p>
+                </div>
+              </div>
+            </div>
 
             {/* Danger Zone */}
             <div className="bg-[#1E1E2E] p-8 rounded-3xl border border-red-900/30 shadow-lg relative overflow-hidden">
@@ -569,7 +675,7 @@ export default function Settings() {
               </button>
             </div>
           </div>
-        </div>
+        )}
 
         {/* --- WARNING MODAL --- */}
         {showDeleteModal && (
