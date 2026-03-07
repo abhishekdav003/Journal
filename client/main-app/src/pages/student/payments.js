@@ -86,7 +86,7 @@ export default function Payments() {
         key: keyId,
         amount: amount,
         currency: currency,
-        name: "Journal Learning",
+        name: "Excel & Grow",
         description: courseTitle,
         order_id: orderId,
         handler: async function (response) {

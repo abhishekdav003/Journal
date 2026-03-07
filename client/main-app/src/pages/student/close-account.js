@@ -125,7 +125,7 @@ export default function CloseAccount() {
               <span>💉</span>
               Need help instead?{" "}
               <a
-                href="mailto:support@journal.com"
+                href="mailto:support@excelandgrow.com"
                 className="text-purple-400 hover:text-purple-300 underline font-medium"
               >
                 Contact Support

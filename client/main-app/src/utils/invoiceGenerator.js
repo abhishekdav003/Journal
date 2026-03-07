@@ -181,7 +181,7 @@ export const generateInvoice = (transaction, user) => {
         <button class="print-button" onclick="window.print()">🖨️ Print Invoice</button>
         
         <div class="header">
-          <div class="logo">📚 Journal Academy</div>
+          <div class="logo">📚 Excel & Grow</div>
           <div class="invoice-title">
             <h1>INVOICE</h1>
             <p class="invoice-number">#${transaction.razorpayOrderId?.slice(-8) || "N/A"}</p>
@@ -240,8 +240,8 @@ export const generateInvoice = (transaction, user) => {
 
         <div class="footer">
           <p><strong>Thank you for your purchase!</strong></p>
-          <p>For any queries, please contact support@journalacademy.com</p>
-          <p style="margin-top: 10px;">© ${new Date().getFullYear()} Journal Academy. All rights reserved.</p>
+          <p>For any queries, please contact support@excelandgrow.com</p>
+          <p style="margin-top: 10px;">© ${new Date().getFullYear()} Excel & Grow. All rights reserved.</p>
         </div>
       </div>
 

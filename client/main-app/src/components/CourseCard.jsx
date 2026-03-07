@@ -77,10 +77,10 @@ export default function CourseCard({ course, user, purchasedCourses = [] }) {
       </div>
 
       {/* Course Info */}
-      <div className="p-4">
+      <div className="p-3 md:p-4">
         <h3
           onClick={() => router.push(getCourseUrl(course))}
-          className="font-bold text-white text-base line-clamp-2 leading-snug mb-2 group-hover:text-purple-400 transition-colors cursor-pointer min-h-[2.8rem]"
+          className="font-bold text-white text-sm md:text-base line-clamp-2 leading-snug mb-2 group-hover:text-purple-400 transition-colors cursor-pointer min-h-10 md:min-h-[2.8rem]"
         >
           {course.title}
         </h3>
@@ -136,12 +136,12 @@ export default function CourseCard({ course, user, purchasedCourses = [] }) {
         </p>
 
         {/* Price and Add to Cart */}
-        <div className="flex items-center justify-between pt-2 border-t border-gray-800">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-2 sm:gap-0 sm:justify-between pt-2 border-t border-gray-800">
           <div
             onClick={() => router.push(getCourseUrl(course))}
             className="cursor-pointer"
           >
-            <p className="text-lg font-bold bg-linear-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+            <p className="text-lg md:text-xl font-bold bg-linear-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
               ₹{course.price?.toLocaleString() || 0}
             </p>
             {course.originalPrice && (
@@ -155,7 +155,7 @@ export default function CourseCard({ course, user, purchasedCourses = [] }) {
           {isEnrolled ? (
             <button
               onClick={handleGoToCourse}
-              className="px-4 py-2 bg-linear-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold text-sm rounded-lg transition-all flex items-center gap-2"
+              className="w-full sm:w-auto px-3 md:px-4 py-2 bg-linear-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold text-xs md:text-sm rounded-lg transition-all flex items-center justify-center gap-2"
             >
               <FiPlay size={14} />
               Go to Course
@@ -163,7 +163,7 @@ export default function CourseCard({ course, user, purchasedCourses = [] }) {
           ) : (
             <button
               onClick={handleAddToCart}
-              className="px-4 py-2 bg-white hover:bg-gray-100 text-purple-900 font-bold text-sm rounded-lg transition-all border-2 border-purple-500/20 hover:border-purple-500/50"
+              className="w-full sm:w-auto px-3 md:px-4 py-2 bg-white hover:bg-gray-100 text-purple-900 font-bold text-xs md:text-sm rounded-lg transition-all border-2 border-purple-500/20 hover:border-purple-500/50"
             >
               Add to cart
             </button>

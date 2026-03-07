@@ -216,7 +216,7 @@ export default function Research() {
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold text-white mb-4">
-              Why Choose <span className="bg-linear-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">Our Platform</span>
+              Why Choose <span className="bg-linear-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">Our Platform ?</span>
             </h2>
           </div>
 
@@ -271,7 +271,7 @@ export default function Research() {
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div>
               <h2 className="text-4xl font-bold text-white mb-6">
-                Why Researchers <span className="bg-linear-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">Choose Us</span>
+                Why Researchers <span className="bg-linear-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">Choose Us ?</span>
               </h2>
               <p className="text-gray-400 text-lg mb-8 leading-relaxed">
                 Join thousands of successful researchers who have published their work in top-tier journals and presented at international conferences.

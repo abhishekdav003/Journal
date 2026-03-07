@@ -130,18 +130,25 @@ export default function Header() {
     // FIX 1: Removed 'overflow-hidden' form header tag.
     // Added 'z-50' to keep header on top.
     <header className="w-full bg-transparent font-sans relative z-50">
-
       <div className="max-w-7xl mx-auto px-4 md:px-6 h-16 flex justify-between items-center relative z-10">
         {/* --- LEFT: LOGO --- */}
-        <Link href="/" className="flex items-center gap-1 group shrink-0">
+        <Link href="/" className="flex items-center gap-2 group shrink-0">
           <Image
             src="/logo.png"
-            alt="Journal"
-            width={120}
-            height={40}
-            className="h-10 md:h-10 w-auto object-contain"
+            alt="Excel & Grow"
+            width={60}
+            height={60}
+            className="h-12 md:h-14 w-auto object-contain"
             priority
           />
+          <div className="flex flex-col">
+            <span className="text-base md:text-lg font-bold text-gray-900 dark:text-white">
+              Excel & Grow
+            </span>
+            <span className="text-[9px] md:text-[10px] text-purple-600 dark:text-purple-400 font-medium -mt-0.5">
+              Academy for teaching, training and research
+            </span>
+          </div>
         </Link>
 
         {/* --- CENTER: DESKTOP NAVIGATION (Pill Design) + SEARCH --- */}
